@@ -2,7 +2,7 @@
 
 A single-file financial simulator that compares Fixed vs Dynamic SIP (Systematic Investment Plan) strategies — built to answer a question most retail investors never properly model: **does timing your monthly investment around market dips actually beat a flat SIP, on an equal-capital basis?**
 
-Live demo → [link]
+Live demo → https://adityaka24-code.github.io/dynamic--capital--allocation-sip-simulator/
 
 ---
 
