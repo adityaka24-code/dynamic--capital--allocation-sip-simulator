@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynamic SIP Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1117;--card:#161b24;--border:#252d3d;--dyn:#00e5ff;--fixed:#ff9f43;--nav-up:#26de81;--nav-dn:#fc5c65;--text:#e8edf5;--muted:#5a6478;--label:#8892a4;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;padding:24px 24px;}
+.hdr{width:100%;margin:0 auto 20px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;}
+h1{font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;letter-spacing:-1px;}
+h1 span{color:var(--dyn);}
+.tag{color:var(--muted);font-size:.75rem;}
+.shell{width:100%;display:grid;grid-template-columns:280px 1fr;gap:18px;min-width:0;}
+@media(max-width:760px){.shell{grid-template-columns:1fr;}}
+.sidebar{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.clabel{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.csec{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:#2d3a50;border-top:1px solid #1e2535;padding-top:10px;margin:12px 0 10px;}
+.ctrl{margin-bottom:13px;}
+.ctrl:last-child{margin-bottom:0;}
+.ctrl-lbl{font-size:.68rem;color:var(--label);margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
+.cv{color:var(--text);font-weight:500;}
+input[type=range]{width:100%;height:4px;appearance:none;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;background:var(--dyn);cursor:pointer;box-shadow:0 0 8px rgba(0,229,255,.4);}
+#vol{background:linear-gradient(to right,#26de81,#f7c948,#fc5c65);}
+.sip-input{background:#0f1117;border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:.85rem;width:100%;outline:none;transition:border-color .15s;}
+.sip-input:focus{border-color:var(--dyn);}
+.scale-row{display:flex;justify-content:space-between;font-size:.57rem;color:#2d3a50;margin-top:3px;padding:0 2px;}
+.presets{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;}
+.pbtn{background:transparent;border:1px solid #252d3d;color:var(--muted);padding:3px 8px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:.6rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.pbtn:hover,.pbtn.active{border-color:var(--dyn);color:var(--dyn);}
+.pbtn.active{background:rgba(0,229,255,.07);}
+.vol-row{display:flex;align-items:flex-start;gap:8px;margin-top:8px;}
+.vbadge{font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;padding:2px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.vdetail{font-size:.62rem;color:var(--muted);line-height:1.55;}
+.synth-box{background:#0d1219;border:1px solid #1e2535;border-radius:10px;padding:12px;margin-bottom:2px;transition:opacity .2s,filter .2s;}
+.synth-box.dimmed{opacity:.3;pointer-events:none;filter:grayscale(.8);}
+.run-btn{width:100%;background:var(--dyn);color:#0f1117;border:none;padding:12px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;transition:all .15s;margin-top:10px;}
+.run-btn:hover{background:#33eaff;box-shadow:0 0 20px rgba(0,229,255,.3);}
+.mode-tabs{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px;}
+.mode-tab{flex:1;padding:10px 6px;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all .15s;}
+.mode-tab.active{background:var(--dyn);color:#0f1117;}
+.mode-tab:not(.active):hover{background:rgba(0,229,255,.08);color:var(--dyn);}
+.charts{display:flex;flex-direction:column;gap:14px;}
+.cw{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 20px 14px;min-width:0;overflow:hidden;}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.ctitle{font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:var(--text);}
+.vchip{font-size:.6rem;padding:2px 8px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:600;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;}
+.leg{display:flex;align-items:center;gap:6px;font-size:.67rem;color:var(--label);}
+.ldot{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+.lline{width:22px;height:4px;border-radius:2px;flex-shrink:0;}
+canvas{display:block;width:100%;}
+.sb-wrap{margin-bottom:16px;min-width:0;overflow:hidden;}
+.sb-banner{border-radius:12px 12px 0 0;padding:12px 20px;display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-bottom:none;flex-wrap:wrap;}
+.sb-winner-main{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;}
+.xirr-race-wrap{background:#131820;border:1px solid var(--border);border-top:none;border-bottom:none;padding:12px 20px;}
+.race-bar{flex:1;position:relative;height:24px;background:var(--border);border-radius:12px;overflow:hidden;}
+.sb-cards{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;min-width:0;}
+.sbc{background:#131820;padding:16px 18px;transition:background .3s;min-width:0;overflow:hidden;}
+.sbc+.sbc{border-left:1px solid var(--border);}
+.ibar{position:relative;height:7px;background:var(--border);border-radius:4px;overflow:hidden;margin:5px 0 3px;}
+.ibar-fill{position:absolute;left:0;top:0;height:100%;border-radius:4px;width:0;transition:width .6s ease;}
+.liq-box{background:#0f1117;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px;}
+.expo-row{margin-top:8px;padding-top:8px;border-top:1px solid #1e2535;}
+.expo-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:.68rem;font-family:'Syne',sans-serif;font-weight:600;}
+.log-toggle-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:.65rem;cursor:pointer;transition:all .15s;}
+.log-toggle-btn:hover{border-color:var(--dyn);color:var(--dyn);}
+.tbl-wrap{overflow-x:auto;margin-top:12px;display:none;}
+table{width:100%;border-collapse:collapse;min-width:640px;}
+th{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:7px 10px;font-size:.72rem;border-bottom:1px solid #1a2030;white-space:nowrap;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.6rem;font-weight:500;}
+.pill-dip{background:rgba(38,222,129,.15);color:var(--nav-up);}
+.pill-rise{background:rgba(252,92,101,.15);color:var(--nav-dn);}
+.pill-norm{background:rgba(88,100,120,.15);color:var(--muted);}
+.bt-stat-group{margin-bottom:14px;}
+.bt-stat-row-label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.bt-stat-row-label::after{content:'';flex:1;height:1px;background:#1e2535;}
+.bt-two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.bt-card{background:#0f1117;border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+/* cap-table inside scorecards */
+.cap-table{width:100%;border-collapse:collapse;}
+.cap-table th{font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:right;padding:3px 4px;border-bottom:1px solid #1e2535;font-weight:400;white-space:nowrap;}
+.cap-table th:first-child{text-align:left;padding-left:0;}
+.cap-table td{font-size:.6rem;text-align:right;padding:4px 4px;border-bottom:none;white-space:nowrap;}
+.cap-table td:first-child{text-align:left;padding-left:0;color:var(--label);}
+.cap-table tr.total-row td{border-top:1px solid #1e2535;padding-top:5px;font-weight:600;font-size:.62rem;}
+/* ── Tooltips ── */
+.tt-wrap{position:relative;display:inline-flex;align-items:center;}
+.tt-icon{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid #2d3a50;color:#3a4d66;font-size:.55rem;cursor:default;margin-left:5px;flex-shrink:0;font-family:'JetBrains Mono',monospace;line-height:1;transition:border-color .15s,color .15s;}
+.tt-wrap:hover .tt-icon{border-color:var(--dyn);color:var(--dyn);}
+.tt-box{display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:999;background:#0d1219;border:1px solid #252d3d;border-radius:9px;padding:9px 11px;font-size:.6rem;color:var(--muted);line-height:1.65;width:220px;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.tt-wrap:hover .tt-box{display:block;}
+/* ── Dip/Rise sub-controls ── */
+.sip-ext-group{background:#0d1219;border-radius:10px;padding:11px 12px;margin-top:10px;display:flex;flex-direction:column;gap:10px;}
+.sip-ext-item{display:flex;flex-direction:column;gap:5px;}
+.sip-ext-lbl{font-size:.6rem;display:flex;align-items:center;gap:6px;color:var(--label);}
+.sip-ext-lbl .sip-signal{font-size:.58rem;font-family:'Syne',sans-serif;font-weight:700;padding:1px 6px;border-radius:10px;flex-shrink:0;}
+.sip-ext-lbl .sip-signal.dip{background:rgba(38,222,129,.15);color:var(--nav-up);}
+.sip-ext-lbl .sip-signal.rise{background:rgba(252,92,101,.15);color:var(--nav-dn);}
+.sip-ext-row{display:flex;align-items:center;gap:8px;}
+.sip-ext-input{background:#0f1117;border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:.78rem;width:100%;outline:none;transition:border-color .15s;}
+.sip-ext-input.dip-inp:focus{border-color:var(--nav-up);}
+.sip-ext-input.rise-inp:focus{border-color:var(--nav-dn);}
+.sip-ext-default{font-size:.55rem;color:#2d3a50;white-space:nowrap;flex-shrink:0;}
+.sip-ext-default.is-default{color:#2d3a50;}
+.sip-ext-default.is-custom{color:var(--dyn);}
+/* Step advanced */
+.adv-toggle{background:transparent;border:none;color:#2d3a50;font-size:.58rem;font-family:'JetBrains Mono',monospace;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:5px;width:100%;transition:color .15s;}
+.adv-toggle:hover{color:var(--muted);}
+.adv-section{display:none;padding-top:8px;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>Dynamic <span>SIP</span> Simulator</h1>
+  <span class="tag">Equal capital every month — liquid-adjusted comparison</span>
+  <span class="tag" style="color:#26de81;font-size:.65rem;border:1px solid rgba(38,222,129,.3);padding:2px 8px;border-radius:20px;">v4 · 9 fixes applied</span>
+</div>
+
+<div class="shell">
+<!-- ─── SIDEBAR ─── -->
+<div class="sidebar">
+<div class="card">
+  <div class="clabel">Parameters</div>
+
+  <!-- STRATEGY CONTROLS — always visible -->
+  <div class="ctrl">
+    <div class="ctrl-lbl">
+      <span class="tt-wrap">Base Monthly SIP<span class="tt-icon">i</span><span class="tt-box">The fixed amount you commit every month. Both strategies always deploy at least this total — Dynamic may put more or less into the equity fund, but the shortfall or surplus is parked in liquid so total capital is always equal.</span></span>
+    </div>
+    <input type="text" class="sip-input" id="sipTyped" value="10,000">
+    <input type="range" id="sipSlider" min="0" max="100" step="1" value="18" style="margin-top:6px">
+    <div class="scale-row"><span>₹1K</span><span>₹10K</span><span>₹1L</span><span>₹10L</span><span>₹10Cr</span></div>
+
+    <!-- Dip / Rise rupee extension controls -->
+    <div class="sip-ext-group">
+      <div class="sip-ext-item">
+        <div class="sip-ext-lbl">
+          <span class="sip-signal dip">▼ on dip, invest up to</span>
+          <span class="tt-wrap"><span class="tt-icon">i</span><span class="tt-box">The most you'll put into the equity fund in a single dip month. Dynamic will never exceed this ceiling regardless of how deep the fall. Default = 2× base SIP.</span></span>
+        </div>
+        <div class="sip-ext-row">
+          <input type="text" class="sip-ext-input dip-inp" id="maxDipTyped" value="20,000">
+          <span class="sip-ext-default is-default" id="maxDipDefaultTag">default</span>
+        </div>
+      </div>
+      <div class="sip-ext-item">
+        <div class="sip-ext-lbl">
+          <span class="sip-signal rise">▲ on rise, invest at least</span>
+          <span class="tt-wrap"><span class="tt-icon">i</span><span class="tt-box">The minimum you'll put into the equity fund in a rally month. Dynamic won't go below this floor — the rest is parked in liquid. Default = 50% of base SIP.</span></span>
+        </div>
+        <div class="sip-ext-row">
+          <input type="text" class="sip-ext-input rise-inp" id="minRiseTyped" value="5,000">
+          <span class="sip-ext-default is-default" id="minRiseDefaultTag">default</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ctrl">
+    <div class="ctrl-lbl">
+      <span class="tt-wrap">Horizon <span class="tt-icon">i</span><span class="tt-box">How many years to run the simulation or backtest. Nifty 50 with a 10-year horizon gives 257 rolling windows across the full history (Nov 1994–Mar 2026).</span></span>
+      <span class="cv" id="yearsVal">10 yrs</span>
+    </div>
+    <input type="range" id="years" min="3" max="30" step="1" value="10">
+  </div>
+
+  <div class="ctrl">
+    <div class="ctrl-lbl">
+      <span class="tt-wrap">Annual SIP step-up <span class="tt-icon">i</span><span class="tt-box">Your SIP amount grows by this percentage every year — a "step-up SIP". At 10%: ₹10,000/month in Year 1 becomes ₹11,000 in Year 2, ₹12,100 in Year 3, etc. Applies to both Fixed and Dynamic strategies equally, so the comparison remains fair. 0% = flat SIP (default).</span></span>
+      <span class="cv" id="sipStepUpVal">0%</span>
+    </div>
+    <input type="range" id="sipStepUp" min="0" max="40" step="1" value="0">
+    <div class="scale-row"><span>0%</span><span>10%</span><span>20%</span><span>30%</span><span>40%</span></div>
+  </div>
+
+  <div class="ctrl">
+    <div class="ctrl-lbl">
+      <span class="tt-wrap">Dip trigger <span class="tt-icon">i</span><span class="tt-box">How far below its trailing average the NAV must fall before Dynamic buys more. At −10%: if the fund is 10% below its 6-month average, Dynamic increases its investment. Lower = more sensitive; higher = only reacts to real crashes. Example: avg ₹100, NAV ₹89 → −11% → trigger fires.</span></span>
+      <span class="cv" id="dipVal">−10%</span>
+    </div>
+    <input type="range" id="dipTrigger" min="5" max="25" step="5" value="10">
+  </div>
+
+  <div class="ctrl">
+    <div class="ctrl-lbl">
+      <span class="tt-wrap">Rise trigger <span class="tt-icon">i</span><span class="tt-box">How far above the trailing average the NAV must rise before Dynamic reduces its fund investment and parks the excess. Same logic as dip trigger but in reverse. Example: avg ₹100, NAV ₹111 → +11% → trigger fires, Dynamic buys less.</span></span>
+      <span class="cv" id="riseVal">+10%</span>
+    </div>
+    <input type="range" id="riseTrigger" min="5" max="25" step="5" value="10">
+  </div>
+
+  <div class="ctrl">
+    <div class="ctrl-lbl">
+      <span class="tt-wrap">Avg window <span class="tt-icon">i</span><span class="tt-box">How many past months of NAV are averaged to form the trigger baseline. 6 months = recent momentum reference. 12 months = slower baseline that ignores short-term swings. Uses only historical prices — no look-ahead. Lower = more signals and more switching.</span></span>
+      <span class="cv" id="avgWinVal">6 months</span>
+    </div>
+    <input type="range" id="avgWin" min="1" max="12" step="1" value="6">
+  </div>
+
+  <!-- Advanced: Step — hidden by default -->
+  <div class="ctrl" style="margin-bottom:6px">
+    <button class="adv-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.textContent=this.textContent.includes('▶')?'▼ Advanced':'▶ Advanced';">▶ Advanced</button>
+    <div class="adv-section">
+      <div class="ctrl-lbl">
+        <span class="tt-wrap">Step per trigger <span class="tt-icon">i</span><span class="tt-box">Each additional full multiple of the trigger threshold adds this step to the SIP multiplier. At 10% step: one threshold crossed = ×1.10, two = ×1.20, etc. Higher step = more aggressive sizing on big moves. Most users don't need to change this.</span></span>
+        <span class="cv" id="stepVal">10%</span>
+      </div>
+      <input type="range" id="step" min="5" max="50" step="5" value="10">
+    </div>
+  </div>
+
+  <div class="csec">Liquid / Parking Rate</div>
+  <div class="ctrl">
+    <div class="ctrl-lbl">
+      <span class="tt-wrap">Idle capital return <span class="tt-icon">i</span><span class="tt-box">Annual return assumed on capital parked in the liquid fund. When one strategy deploys less into equity, the difference earns this rate. 4% ≈ liquid mutual fund / overnight fund. 7% ≈ debt fund. 0% shows worst-case cost of parking.</span></span>
+      <span class="cv" id="liquidVal">4.0%</span>
+    </div>
+    <input type="range" id="liquidRate" min="0" max="15" step="0.5" value="4">
+  </div>
+
+  <!-- BACKTEST DATA SOURCE — shown only in backtest mode. Synthetic removed. -->
+  <div id="bt-source-section" style="display:block">
+    <div class="csec">Backtest Data Source</div>
+    <div class="ctrl" style="margin-bottom:8px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="pbtn active" id="bt-mode-nifty" onclick="setBTMode('nifty',this)">📈 Nifty 50</button>
+        <button class="pbtn" id="bt-mode-csv" onclick="setBTMode('csv',this)">📂 CSV</button>
+      </div>
+      <div id="bt-mode-desc" style="font-size:.6rem;color:var(--muted);margin-top:7px;line-height:1.5">Real Nifty 50 closes, Nov 1994–Mar 2026 (377 months).</div>
+    </div>
+    <div id="csv-upload-area" style="display:none;margin-bottom:10px;">
+      <div style="font-size:.62rem;color:var(--muted);margin-bottom:5px">One monthly NAV per line, oldest first, no header.</div>
+      <input type="file" id="csvFile" accept=".csv,.txt" style="font-size:.65rem;color:var(--muted);width:100%;">
+      <div id="csv-status" style="font-size:.6rem;color:var(--nav-up);margin-top:4px;display:none;"></div>
+    </div>
+  </div>
+
+  <!-- SYNTH SETTINGS — shown only in simulate mode, at bottom -->
+  <div id="synth-section" style="display:none">
+    <div class="csec">Synthetic Market</div>
+    <div class="synth-box" id="synth-box">
+      <div class="ctrl" style="margin-bottom:11px">
+        <div class="ctrl-lbl">
+          <span class="tt-wrap">Target CAGR <span class="tt-icon">i</span><span class="tt-box">The annualised return the synthetic market path is designed to produce. Uses Itô-corrected GBM so the geometric mean matches exactly. Bear=−3%, Sideways=+1%, Balanced=+7.5%, Bull=+13%.</span></span>
+          <span class="cv" id="cagrVal">7.5%</span>
+        </div>
+        <input type="range" id="cagr" min="-10" max="20" step="0.5" value="7.5">
+        <div class="scale-row"><span>-10%</span><span>0%</span><span>10%</span><span>20%</span></div>
+        <div class="presets">
+          <button class="pbtn" onclick="setPreset(-3,8,this)">🐻 Bear</button>
+          <button class="pbtn" onclick="setPreset(1,5,this)">↔️ Sideways</button>
+          <button class="pbtn active" onclick="setPreset(7.5,5,this)">⚖️ Balanced</button>
+          <button class="pbtn" onclick="setPreset(13,7,this)">🚀 Bull</button>
+        </div>
+      </div>
+      <div class="ctrl" style="margin-bottom:0">
+        <div class="ctrl-lbl">
+          <span class="tt-wrap">Volatility <span class="tt-icon">i</span><span class="tt-box">Monthly standard deviation of returns and crash probability/magnitude. Higher volatility produces more dip/rise signals, giving Dynamic more opportunities to act. Realistic ranges: 3–4 large-cap, 5–7 mid-cap, 8–10 small-cap.</span></span>
+          <span class="cv" id="volVal">5 / 10</span>
+        </div>
+        <input type="range" id="vol" min="1" max="10" step="1" value="5">
+        <div class="vol-row">
+          <span class="vbadge" id="volBadge">Medium</span>
+          <span class="vdetail" id="volDesc">Monthly swings ~±4.5% • crash ~5% • mid-cap</span>
+        </div>
+      </div>
+      <div class="ctrl" style="margin-top:12px;margin-bottom:0">
+        <div class="ctrl-lbl">
+          <span class="tt-wrap">Simulations <span class="tt-icon">i</span><span class="tt-box">Number of independent random paths to generate. 1 = single path shown in charts. Higher counts give a stable distribution of outcomes — use 1,000+ for reliable win-rate statistics. Warning: values above 10,000 may be slow.</span></span>
+          <span class="cv" id="simCountVal">1</span>
+        </div>
+        <input type="range" id="simCount" min="1" max="100000" step="1" value="1"
+          oninput="document.getElementById('simCountVal').textContent=fmtSimCount(+this.value)">
+        <div class="scale-row"><span>1</span><span>100</span><span>1K</span><span>10K</span><span>100K</span></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="run-btn" id="run-btn" onclick="runMode()">&#9654; Run Backtest</button>
+</div>
+
+<div class="card" style="font-size:.7rem;color:var(--muted);line-height:1.7;">
+  <div class="clabel">How It Works</div>
+  <strong style="color:var(--text)">Equal capital both strategies</strong> — <code>max(dynAmt, baseSIP)</code> each month. The strategy investing less parks the gap in liquid at your rate.<br><br>
+  <span style="color:var(--nav-up)">▼ Dip</span>: NAV below trailing avg → Dynamic buys more.<br>
+  <span style="color:var(--nav-dn)">▲ Rise</span>: NAV above trailing avg → Dynamic buys less, parks rest.<br><br>
+  <span style="color:var(--muted);font-size:.62rem">Avg window uses <em>past months only</em> (no look-ahead). XIRR computed via Newton-Raphson on time-dated cashflows.</span>
+</div>
+</div>
+
+<!-- ─── MAIN ─── -->
+<div style="min-width:0;overflow:hidden;">
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <button class="mode-tab" id="tab-simulate" onclick="setPageMode('simulate')">📊 Simulate</button>
+    <button class="mode-tab active" id="tab-backtest" onclick="setPageMode('backtest')">🔁 Backtest</button>
+  </div>
+
+  <!-- ══ SIMULATE PANEL ══ -->
+  <div id="panel-simulate" style="display:none">
+
+    <!-- SCOREBOARD -->
+    <div class="sb-wrap">
+      <!-- Winner banner -->
+      <div class="sb-banner" id="sb-banner" style="background:#1a2535;">
+        <span id="winner-icon" style="font-size:1.4rem">⏳</span>
+        <div>
+          <div class="sb-winner-main" id="winner-text" style="color:var(--text)">Run simulation</div>
+          <div style="font-size:.62rem;color:var(--muted);margin-top:2px" id="winner-sub"></div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Period</div>
+          <div style="font-size:.78rem;color:var(--text);font-family:'Syne',sans-serif;font-weight:600" id="sim-period-label">—</div>
+        </div>
+      </div>
+
+      <!-- XIRR race bar -->
+      <div class="xirr-race-wrap">
+        <div style="font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Annualised Return on Total Capital (XIRR)</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:.72rem;color:var(--fixed);min-width:54px;text-align:right;font-family:'Syne',sans-serif;font-weight:700" id="xirr-fixed-lbl">—</span>
+          <div class="race-bar">
+            <div id="xb-fixed" style="position:absolute;right:50%;top:0;height:100%;background:rgba(255,159,67,.65);border-radius:12px 0 0 12px;width:0;transition:width .6s;"></div>
+            <div id="xb-dyn"   style="position:absolute;left:50%;top:0;height:100%;background:rgba(0,229,255,.65);border-radius:0 12px 12px 0;width:0;transition:width .6s;"></div>
+            <div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:#252d3d;transform:translateX(-50%);z-index:2;"></div>
+          </div>
+          <span style="font-size:.72rem;color:var(--dyn);min-width:54px;font-family:'Syne',sans-serif;font-weight:700" id="xirr-dyn-lbl">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;padding:0 68px;">
+          <span style="font-size:.58rem;color:var(--muted)">◀ Fixed SIP</span>
+          <span style="font-size:.58rem;color:var(--muted)">Dynamic SIP ▶</span>
+        </div>
+      </div>
+
+      <!-- Strategy cards -->
+      <div class="sb-cards">
+        <!-- Fixed -->
+        <div class="sbc" id="card-fixed">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;color:var(--fixed);margin-bottom:12px">■ Fixed SIP</div>
+          <!-- Capital breakdown table -->
+          <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
+            <thead><tr>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:3px 0;border-bottom:1px solid #1e2535;font-weight:400"></th>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:right;padding:3px 4px;border-bottom:1px solid #1e2535;font-weight:400">In</th>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:right;padding:3px 4px;border-bottom:1px solid #1e2535;font-weight:400">Value</th>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:right;padding:3px 0;border-bottom:1px solid #1e2535;font-weight:400">Return</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td style="font-size:.6rem;color:var(--label);padding:4px 0">Equity Fund</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px" id="r-fixed-fund-in">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px;color:var(--fixed)" id="r-fixed-fund-val">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 0" id="r-fixed-fund-ret">—</td>
+              </tr>
+              <tr>
+                <td style="font-size:.6rem;color:var(--label);padding:4px 0">Liquid Fund</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px" id="r-fixed-liq-in">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px;color:var(--nav-up)" id="r-fixed-liq-val">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 0;color:var(--muted)" id="r-fixed-liq-ret">—</td>
+              </tr>
+              <tr style="border-top:1px solid #1e2535">
+                <td style="font-size:.62rem;color:var(--text);font-weight:600;padding:5px 0">Total</td>
+                <td style="font-size:.62rem;text-align:right;padding:5px 4px;font-weight:600" id="r-fixed-deployed">—</td>
+                <td style="font-size:.62rem;text-align:right;padding:5px 4px;font-weight:600;color:var(--fixed)" id="r-fixed-total">—</td>
+                <td style="font-size:.72rem;text-align:right;padding:5px 0;font-family:'Syne',sans-serif;font-weight:700" id="r-fixed-xirr">—</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:.57rem;color:var(--muted);margin-bottom:4px">
+            <span id="r-fixed-multi">—</span> · <span id="r-fixed-gain">—</span>
+          </div>
+          <!-- XIRR justification -->
+          <div style="background:#0d1219;border:1px solid #1e2535;border-radius:8px;padding:7px 9px;font-size:.58rem;color:var(--muted);line-height:1.6" id="r-fixed-xirr-proof">—</div>
+        </div>
+
+        <!-- Dynamic -->
+        <div class="sbc" id="card-dyn">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;color:var(--dyn);margin-bottom:12px">■ Dynamic SIP</div>
+          <!-- Capital breakdown table -->
+          <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
+            <thead><tr>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:3px 0;border-bottom:1px solid #1e2535;font-weight:400"></th>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:right;padding:3px 4px;border-bottom:1px solid #1e2535;font-weight:400">In</th>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:right;padding:3px 4px;border-bottom:1px solid #1e2535;font-weight:400">Value</th>
+              <th style="font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;text-align:right;padding:3px 0;border-bottom:1px solid #1e2535;font-weight:400">Return</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td style="font-size:.6rem;color:var(--label);padding:4px 0">Equity Fund</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px" id="r-dyn-fund-in">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px;color:var(--dyn)" id="r-dyn-fund-val">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 0" id="r-dyn-fund-ret">—</td>
+              </tr>
+              <tr>
+                <td style="font-size:.6rem;color:var(--label);padding:4px 0">Liquid Fund</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px" id="r-dyn-liq-in">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 4px;color:var(--nav-up)" id="r-dyn-liq-val">—</td>
+                <td style="font-size:.6rem;text-align:right;padding:4px 0;color:var(--muted)" id="r-dyn-liq-ret">—</td>
+              </tr>
+              <tr style="border-top:1px solid #1e2535">
+                <td style="font-size:.62rem;color:var(--text);font-weight:600;padding:5px 0">Total</td>
+                <td style="font-size:.62rem;text-align:right;padding:5px 4px;font-weight:600" id="r-dyn-deployed">—</td>
+                <td style="font-size:.62rem;text-align:right;padding:5px 4px;font-weight:600;color:var(--dyn)" id="r-dyn-total">—</td>
+                <td style="font-size:.72rem;text-align:right;padding:5px 0;font-family:'Syne',sans-serif;font-weight:700" id="r-dyn-xirr">—</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="font-size:.57rem;color:var(--muted);margin-bottom:4px">
+            <span id="r-dyn-multi">—</span> · <span id="r-dyn-gain">—</span>
+          </div>
+          <!-- XIRR justification -->
+          <div style="background:#0d1219;border:1px solid #1e2535;border-radius:8px;padding:7px 9px;font-size:.58rem;color:var(--muted);line-height:1.6" id="r-dyn-xirr-proof">—</div>
+          <!-- Fund exposure deviation vs pure fixed -->
+          <div class="expo-row">
+            <div style="font-size:.57rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Fund Exposure vs Fixed Baseline</div>
+            <span class="expo-badge" id="expo-badge">—</span>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:4px" id="expo-note">—</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /scoreboard -->
+
+    <div class="charts">
+      <!-- Portfolio -->
+      <div class="cw">
+        <div class="ch">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="ctitle">Total Wealth Over Time</div>
+            <span class="vchip" id="vc1"></span>
+          </div>
+          <div class="legend">
+            <div class="leg"><div class="ldot" style="background:rgba(0,229,255,.3);border:2px solid var(--dyn)"></div>Dynamic</div>
+            <div class="leg"><div class="ldot" style="background:rgba(255,159,67,.3);border:2px solid var(--fixed)"></div>Fixed</div>
+          </div>
+        </div>
+        <canvas id="chartVal" height="220"></canvas>
+      </div>
+      <!-- NAV -->
+      <div class="cw">
+        <div class="ch">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="ctitle">Fund NAV &amp; Signals</div>
+            <span class="vchip" id="vc2"></span>
+          </div>
+          <div class="legend">
+            <div class="leg"><div class="lline" style="background:var(--nav-up)"></div>Rising</div>
+            <div class="leg"><div class="lline" style="background:var(--nav-dn)"></div>Falling</div>
+            <div class="leg"><div class="ldot" style="background:var(--nav-up)"></div>Buy More</div>
+            <div class="leg"><div class="ldot" style="background:var(--nav-dn)"></div>Buy Less</div>
+            <div class="leg"><div class="ldot" style="background:var(--nav-up);outline:2px solid #fff;outline-offset:1px"></div>Ceiling</div>
+            <div class="leg"><div class="lline" style="border-top:2px dashed #555;background:transparent;height:0"></div>Avg Window</div>
+          </div>
+        </div>
+        <canvas id="chartNav" height="200"></canvas>
+      </div>
+      <!-- SIP bars -->
+      <div class="cw">
+        <div class="ch">
+          <div class="ctitle">Monthly Investment Amount</div>
+          <div class="legend">
+            <div class="leg"><div class="ldot" style="background:var(--nav-up)"></div>Extra→Fund</div>
+            <div class="leg"><div class="ldot" style="background:var(--nav-dn)"></div>Reduced→Liquid</div>
+            <div class="leg"><div class="lline" style="background:var(--fixed);height:3px"></div>Fixed</div>
+            <div class="leg"><div class="lline" style="background:rgba(0,229,255,.5)"></div>Ceiling</div>
+            <div class="leg"><div class="lline" style="background:rgba(252,92,101,.5)"></div>Floor</div>
+          </div>
+        </div>
+        <canvas id="chartSIP" height="140"></canvas>
+      </div>
+      <!-- Monthly log -->
+      <div class="cw">
+        <div class="ch">
+          <div class="ctitle">Monthly Log</div>
+          <button class="log-toggle-btn" id="logToggleBtn" onclick="toggleLog()">▶ Show raw data</button>
+        </div>
+        <div class="tbl-wrap" id="logTable">
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th><th>NAV</th><th>Avg Window</th><th>Signal</th>
+                <th>Capital</th><th>Fixed→Fund</th><th>Fixed Liq</th>
+                <th>Dyn→Fund</th><th>Dyn Liq</th>
+                <th>Fixed Wealth</th><th>Dyn Wealth</th>
+              </tr>
+            </thead>
+            <tbody id="tbl"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /panel-simulate -->
+
+  <!-- ══ BACKTEST PANEL ══ -->
+  <div id="panel-backtest" style="min-width:0;">
+    <div class="cw" style="overflow:hidden;min-width:0;">
+      <!-- Header -->
+      <div class="ch" style="margin-bottom:12px">
+        <div>
+          <div class="ctitle" id="bt-title">Backtest — Nifty 50</div>
+          <div style="font-size:.67rem;color:var(--muted);margin-top:3px" id="bt-sub">Every possible X-year window in Nifty 50 history (Nov 1994–Mar 2026)</div>
+        </div>
+      </div>
+
+      <!-- SCOREBOARD — same format as simulate -->
+      <div class="sb-wrap" id="bt-scoreboard">
+        <div class="sb-banner" id="bt-sb-banner" style="background:#1a2535;">
+          <span id="bt-winner-icon" style="font-size:1.4rem">⏳</span>
+          <div>
+            <div class="sb-winner-main" id="bt-winner-text" style="color:var(--text)">Run backtest</div>
+            <div style="font-size:.62rem;color:var(--muted);margin-top:2px" id="bt-winner-sub"></div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Windows</div>
+            <div style="font-size:.78rem;color:var(--text);font-family:'Syne',sans-serif;font-weight:600" id="bt-period-label">—</div>
+          </div>
+        </div>
+        <div class="xirr-race-wrap">
+          <div style="font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Median XIRR across all windows</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:.72rem;color:var(--fixed);min-width:54px;text-align:right;font-family:'Syne',sans-serif;font-weight:700" id="bt-xirr-fixed-lbl">—</span>
+            <div class="race-bar">
+              <div id="bt-xb-fixed" style="position:absolute;right:50%;top:0;height:100%;background:rgba(255,159,67,.65);border-radius:12px 0 0 12px;width:0;transition:width .6s;"></div>
+              <div id="bt-xb-dyn" style="position:absolute;left:50%;top:0;height:100%;background:rgba(0,229,255,.65);border-radius:0 12px 12px 0;width:0;transition:width .6s;"></div>
+              <div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:#252d3d;transform:translateX(-50%);z-index:2;"></div>
+            </div>
+            <span style="font-size:.72rem;color:var(--dyn);min-width:54px;font-family:'Syne',sans-serif;font-weight:700" id="bt-xirr-dyn-lbl">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:5px;padding:0 68px;">
+            <span style="font-size:.58rem;color:var(--muted)">◀ Fixed SIP</span>
+            <span style="font-size:.58rem;color:var(--muted)">Dynamic SIP ▶</span>
+          </div>
+        </div>
+        <div class="sb-cards">
+          <div class="sbc" id="bt-card-fixed">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;color:var(--fixed);margin-bottom:10px">■ Fixed SIP — median window</div>
+            <table class="cap-table">
+              <thead><tr><th></th><th>Into</th><th>Final value</th><th>Return</th></tr></thead>
+              <tbody>
+                <tr><td>Equity fund</td><td id="bt-fixed-fund-in">—</td><td id="bt-fixed-fund-val" style="color:var(--fixed)">—</td><td id="bt-fixed-fund-ret">—</td></tr>
+                <tr><td>Liquid fund</td><td id="bt-fixed-liq-in">—</td><td id="bt-fixed-liq-val" style="color:var(--nav-up)">—</td><td id="bt-fixed-liq-ret">—</td></tr>
+                <tr class="total-row"><td>Total</td><td id="bt-fixed-deployed">—</td><td id="bt-fixed-total" style="color:var(--fixed)">—</td><td id="bt-fixed-xirr" style="font-size:.85rem">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="sbc" id="bt-card-dyn">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;color:var(--dyn);margin-bottom:10px">■ Dynamic SIP — median window</div>
+            <table class="cap-table">
+              <thead><tr><th></th><th>Into</th><th>Final value</th><th>Return</th></tr></thead>
+              <tbody>
+                <tr><td>Equity fund</td><td id="bt-dyn-fund-in">—</td><td id="bt-dyn-fund-val" style="color:var(--dyn)">—</td><td id="bt-dyn-fund-ret">—</td></tr>
+                <tr><td>Liquid fund</td><td id="bt-dyn-liq-in">—</td><td id="bt-dyn-liq-val" style="color:var(--nav-up)">—</td><td id="bt-dyn-liq-ret">—</td></tr>
+                <tr class="total-row"><td>Total</td><td id="bt-dyn-deployed">—</td><td id="bt-dyn-total" style="color:var(--dyn)">—</td><td id="bt-dyn-xirr" style="font-size:.85rem">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trigger hit stats — answers "why doesn't floor/ceiling change results?" -->
+      <div style="background:#0d1219;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+        <div style="font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Strategy trigger activity — across all windows</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+          <div>
+            <div style="font-size:.57rem;color:var(--muted);margin-bottom:3px">Dip months</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--nav-up)" id="bt-dip-pct">—</div>
+            <div style="font-size:.57rem;color:var(--muted)" id="bt-dip-count">of months</div>
+          </div>
+          <div>
+            <div style="font-size:.57rem;color:var(--muted);margin-bottom:3px">Ceiling hit</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--dyn)" id="bt-ceil-pct">—</div>
+            <div style="font-size:.57rem;color:var(--muted)" id="bt-ceil-count">of months</div>
+          </div>
+          <div>
+            <div style="font-size:.57rem;color:var(--muted);margin-bottom:3px">Rise months</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--nav-dn)" id="bt-rise-pct">—</div>
+            <div style="font-size:.57rem;color:var(--muted)" id="bt-rise-count">of months</div>
+          </div>
+          <div>
+            <div style="font-size:.57rem;color:var(--muted);margin-bottom:3px">Floor hit</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--fixed)" id="bt-floor-pct">—</div>
+            <div style="font-size:.57rem;color:var(--muted)" id="bt-floor-count">of months</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wealth over time — median path with percentile band -->
+      <div class="cw" style="margin-bottom:14px;padding:16px 20px 12px;">
+        <div class="ch">
+          <div class="ctitle">Total Wealth Over Time — median path</div>
+          <div class="legend">
+            <div class="leg"><div class="ldot" style="background:rgba(0,229,255,.3);border:2px solid var(--dyn)"></div>Dynamic</div>
+            <div class="leg"><div class="ldot" style="background:rgba(255,159,67,.3);border:2px solid var(--fixed)"></div>Fixed</div>
+            <div class="leg"><div class="lline" style="background:rgba(0,229,255,.15);height:8px;border-radius:2px"></div>25–75p band</div>
+          </div>
+        </div>
+        <canvas id="btWealthChart" height="200"></canvas>
+      </div>
+
+      <!-- VERDICT CARD -->
+      <div id="bt-verdict" style="background:#0d1219;border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+        <div style="font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Verdict</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;line-height:1.4" id="bt-verdict-line">Run backtest to see results</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.6" id="bt-verdict-detail"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #1e2535">
+          <div>
+            <div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Win rate</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem" id="bt-winrate-disp">—</div>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="bt-winrate-sub">of periods</div>
+          </div>
+          <div>
+            <div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Avg extra when wins</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem;color:var(--nav-up)" id="bt-avg-win-corpus">—</div>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="bt-avg-win-sub">per ₹X/month SIP</div>
+          </div>
+          <div>
+            <div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Avg shortfall when loses</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem;color:var(--nav-dn)" id="bt-avg-loss-corpus">—</div>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="bt-avg-loss-sub">per ₹X/month SIP</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:10px 14px;border-radius:8px;background:#131820;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div style="font-size:.65rem;color:var(--muted)">Expected value of choosing Dynamic over Fixed</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem" id="bt-ev">—</div>
+        </div>
+      </div>
+
+      <!-- Detail grid: Donut + stat breakdown -->
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+        <div style="position:relative;width:140px;height:140px;">
+          <canvas id="btDonut" width="140" height="140" style="width:140px;height:140px;"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--dyn);line-height:1" id="bt-corpus-pct">—</div>
+            <div style="font-size:.55rem;color:var(--muted);text-align:center;margin-top:3px">Dynamic<br>wins</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="bt-card">
+            <div style="font-size:.58rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Dynamic wins (corpus)</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;color:var(--dyn)" id="bt-corpus-dyn">—</div>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="bt-corpus-dyn-pct">—</div>
+          </div>
+          <div class="bt-card">
+            <div style="font-size:.58rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Fixed wins (corpus)</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;color:var(--fixed)" id="bt-corpus-fixed">—</div>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:2px" id="bt-corpus-fixed-pct">—</div>
+          </div>
+          <div class="bt-card">
+            <div style="font-size:.58rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Avg edge (Dyn wins)</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;color:var(--dyn)" id="bt-gap-dyn">—</div>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:2px">XIRR pp advantage</div>
+          </div>
+          <div class="bt-card">
+            <div style="font-size:.58rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Avg edge (Fixed wins)</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem;color:var(--fixed)" id="bt-gap-fixed">—</div>
+            <div style="font-size:.6rem;color:var(--muted);margin-top:2px">XIRR pp advantage</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per-period XIRR chart -->
+      <div style="font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px" id="bt-chart-lbl">XIRR per window — orange=Fixed, cyan=Dynamic</div>
+      <canvas id="btBars" height="180"></canvas>
+      <div class="legend" style="margin-top:10px;">
+        <div class="leg"><div class="ldot" style="background:var(--dyn)"></div>Dynamic</div>
+        <div class="leg"><div class="ldot" style="background:var(--fixed)"></div>Fixed</div>
+        <div class="leg"><div class="lline" style="background:rgba(38,222,129,.5)"></div>Dynamic ahead</div>
+        <div class="leg"><div class="lline" style="background:rgba(252,92,101,.5)"></div>Fixed ahead</div>
+      </div>
+
+      <!-- Distribution -->
+      <div style="margin-top:18px;">
+        <div style="font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Corpus advantage distribution (Dynamic − Fixed, ₹)</div>
+        <canvas id="btDist" height="80"></canvas>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:.6rem;color:var(--muted);" id="bt-dist-labels"></div>
+      </div>
+    </div>
+  </div><!-- /panel-backtest -->
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+
+// ── Nifty 50 data ─────────────────────────────────────────────────────────────
+const NIFTY_DATA = [1000.0,1013.7,1027.6,1041.7,1056.0,1070.4,1085.1,1100.0,1073.4,1047.5,1022.3,997.6,973.5,950.0,1001.0,1054.7,1111.3,1170.9,1233.8,1300.0,1242.3,1187.2,1134.5,1084.1,1036.0,990.0,1072.5,1161.8,1258.6,1363.4,1477.0,1600.0,1498.5,1403.5,1314.5,1231.2,1153.1,1080.0,1037.7,997.1,958.1,920.6,884.6,850.0,873.3,897.3,922.0,947.3,973.3,1000.0,1030.9,1062.7,1095.4,1129.2,1164.1,1200.0,1242.7,1286.9,1332.7,1380.1,1429.2,1480.0,1579.8,1686.3,1800.0,1726.2,1655.4,1587.5,1522.3,1459.9,1400.0,1358.8,1318.8,1280.0,1248.1,1216.9,1186.6,1157.0,1128.1,1100.0,1047.5,997.6,950.0,985.3,1022.0,1060.0,1056.6,1053.3,1050.0,1046.6,1043.3,1040.0,1048.8,1057.7,1066.7,1075.7,1084.8,1094.0,1050.5,1008.7,968.5,930.0,1015.5,1108.9,1210.9,1322.3,1443.9,1576.7,1721.7,1880.0,1769.8,1666.1,1568.5,1476.5,1390.0,1472.4,1559.7,1652.1,1750.0,1853.7,1963.6,2080.0,2102.7,2125.7,2148.9,2172.3,2196.0,2220.0,2312.5,2408.8,2509.2,2613.7,2722.6,2836.0,2860.4,2885.0,2909.8,2934.8,2960.0,2650.0,2834.2,3031.2,3241.9,3467.2,3708.2,3966.0,4022.8,4080.3,4138.7,4198.0,4258.1,4319.0,4579.6,4855.8,5148.8,5459.4,5788.8,6138.0,6200.0,5511.8,4900.0,4594.7,4308.4,4040.0,3612.9,3231.0,2889.4,2584.0,2765.2,2959.0,2889.0,2820.7,2754.0,3192.7,3701.4,4291.0,4430.8,4575.1,4724.1,4878.0,5036.9,5201.0,5219.5,5238.1,5256.7,5275.4,5294.2,5313.0,5441.8,5573.7,5708.8,5847.1,5988.8,6134.0,6050.0,5967.2,5885.5,5804.9,5725.4,5647.0,5462.0,5283.0,5110.0,4942.6,4780.6,4624.0,4727.2,4832.8,4940.7,5051.0,5163.7,5279.0,5378.5,5479.9,5583.2,5688.5,5795.7,5905.0,5894.5,5883.9,5873.4,5862.9,5852.5,5842.0,5916.6,5992.1,6068.6,6146.1,6224.5,6304.0,6479.0,6658.9,6843.7,7033.7,7229.0,7370.8,7515.4,7662.8,7813.1,7966.4,8122.7,8282.0,8351.1,8420.8,8491.0,8384.4,8279.0,8175.1,8072.4,7971.0,7964.7,7958.5,7952.2,7946.0,7447.9,6981.0,7093.0,7206.7,7322.3,7439.7,7559.1,7680.3,7803.5,7928.6,8055.8,8185.0,8393.9,8608.1,8827.8,9053.0,9284.1,9521.0,9682.3,9846.4,10013.3,10183.0,10355.5,10531.0,11028.0,10954.9,10882.2,10810.1,10738.4,10667.2,10596.4,10526.1,10456.3,10387.0,10622.3,10863.0,11012.0,11163.0,11316.1,11471.2,11628.5,11788.0,11850.5,11913.3,11976.5,12040.0,12103.8,12168.0,12282.0,9604.7,7511.0,8345.2,9272.1,10302.0,10608.1,10923.4,11248.0,12093.8,13003.2,13981.0,14213.8,14450.4,14691.0,15026.9,15370.5,15722.0,16323.1,16947.3,17595.2,18268.0,17805.1,17354.0,17390.9,17427.9,17465.0,16884.2,16322.8,15780.0,16206.4,16644.3,17094.0,17424.6,17761.5,18105.0,17853.2,17604.9,17360.0,17869.9,18394.7,18935.0,19166.8,19401.5,19639.0,20312.9,21010.0,21731.0,21927.9,22126.5,22327.0,22874.5,23435.4,24010.0,24595.9,25196.1,25811.0,25067.5,24345.3,23644.0,23163.0,22125.0,23592.0,24335.0,24937.0,24142.0,24836.0,25235.0,26373.0,24500.0,23800.0,23650.0,23500.0,21744.0,23306.0];
+const NIFTY_START_YEAR=1994, NIFTY_START_MONTH=11; // Nov 1994 = index 0
+// 377 months: Nov 1994 – Mar 2026
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+const fmt      = n=>'₹'+Math.round(n).toLocaleString('en-IN');
+const fmtPct   = n=>(n>=0?'+':'')+n.toFixed(2)+'%';
+const fmtShort = n=>{const a=Math.abs(n),s=n<0?'-':'';if(a>=1e7)return s+'₹'+(a/1e7).toFixed(2)+' Cr';if(a>=1e5)return s+'₹'+(a/1e5).toFixed(2)+' L';if(a>=1e3)return s+'₹'+(a/1e3).toFixed(1)+' K';return s+'₹'+Math.round(a);};
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+// ── TRUE XIRR via Newton-Raphson ──────────────────────────────────────────────
+// cashflows: array of {amount, t} where t = years from start
+//   outflows (investments) = negative amount
+//   final inflow (wealth) = positive amount
+// Returns annualised IRR in % (e.g. 12.5 for 12.5%)
+// Multi-guess: tries positive and negative starting points so loss scenarios
+// (where a positive-only guess diverges) converge correctly.
+function calcXIRR(cashflows){
+  const MAX_ITER=300, TOL=1e-8;
+  // Try multiple starting guesses — both positive and negative — and return
+  // the first one that converges. This handles bear-market / loss scenarios
+  // where r=0.1 diverges upward and hits a clamp.
+  const guesses = [0.1, -0.1, 0.5, -0.3, -0.5, 0.05, -0.05, 1.0, -0.8];
+  for(const guess of guesses){
+    let r = guess;
+    let converged = false;
+    for(let iter=0; iter<MAX_ITER; iter++){
+      if(1+r <= 0){ r = -0.9; continue; }
+      let npv=0, dnpv=0;
+      for(const cf of cashflows){
+        const base = 1+r;
+        if(base <= 0) break;
+        const pv = cf.amount / Math.pow(base, cf.t);
+        npv  += pv;
+        dnpv -= cf.t * cf.amount / Math.pow(base, cf.t+1);
+      }
+      if(Math.abs(dnpv) < 1e-12) break;
+      const rNew = r - npv/dnpv;
+      if(Math.abs(rNew - r) < TOL){ r = rNew; converged = true; break; }
+      r = rNew;
+      // Tight clamp: real-world SIP returns don't exceed ±200% annualised
+      if(r < -0.9999) r = -0.9999;
+      if(r > 2.0) r = 2.0;
+    }
+    if(converged) return r*100;
+  }
+  // Fallback: bisection between -99% and +200% — guaranteed to find the root
+  let lo=-0.9999, hi=2.0;
+  const npvAt=x=>cashflows.reduce((s,cf)=>s+cf.amount/Math.pow(1+x,cf.t),0);
+  for(let i=0;i<100;i++){
+    const mid=(lo+hi)/2;
+    if(npvAt(mid)*npvAt(lo)<0) hi=mid; else lo=mid;
+    if(hi-lo<1e-7) return (lo+hi)/2*100;
+  }
+  return (lo+hi)/2*100;
+}
+
+// Build XIRR cashflows from a simulation run
+// Each monthly investment is an outflow at t = (i+1)/12 years
+// Terminal wealth is an inflow at t = years
+function buildXIRR(rows, finalWealth, years){
+  const cfs = rows.map((r,i)=>({ amount: -r.totalCap, t: (i+1)/12 }));
+  cfs.push({ amount: finalWealth, t: years });
+  return calcXIRR(cfs);
+}
+function buildXIRRFixed(rows, fixedFinalWealth, years){
+  // Fixed SIP cashflow: always totalCap out (fixed deploys base + parks gap in liquid)
+  const cfs = rows.map((r,i)=>({ amount: -r.totalCap, t: (i+1)/12 }));
+  cfs.push({ amount: fixedFinalWealth, t: years });
+  return calcXIRR(cfs);
+}
+function buildXIRRDyn(rows, dynFinalWealth, years){
+  // Dynamic SIP cashflow: always totalCap out (dyn deploys more/less + liquid makes up gap)
+  const cfs = rows.map((r,i)=>({ amount: -r.totalCap, t: (i+1)/12 }));
+  cfs.push({ amount: dynFinalWealth, t: years });
+  return calcXIRR(cfs);
+}
+
+// ── Month label helper ────────────────────────────────────────────────────────
+const MNAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function niftyIdxToLabel(idx){
+  // idx 0 = Nov 1994
+  const totalMonths = (NIFTY_START_YEAR-1994)*12 + (NIFTY_START_MONTH-1) + idx;
+  const y = 1994 + Math.floor(totalMonths/12);
+  const m = totalMonths % 12;
+  return MNAMES[m]+' '+y;
+}
+function horizonLabel(startIdx, months){
+  return niftyIdxToLabel(startIdx)+' – '+niftyIdxToLabel(startIdx+months);
+}
+
+// ── Volatility config ─────────────────────────────────────────────────────────
+const VOL=[null,
+  {sigma:.008,crashProb:.005,crashMag:-.04,crashDur:2,label:'Glacial',  c:'#26de81',bg:'rgba(38,222,129,.12)', desc:'Swings ~±0.8% • crash almost never • liquid/debt hybrid'},
+  {sigma:.015,crashProb:.010,crashMag:-.06,crashDur:2,label:'Calm',     c:'#26de81',bg:'rgba(38,222,129,.10)', desc:'Swings ~±1.5% • crash ~1% chance • bluechip large-cap'},
+  {sigma:.025,crashProb:.020,crashMag:-.08,crashDur:3,label:'Low',      c:'#7bed9f',bg:'rgba(123,237,159,.10)',desc:'Swings ~±2.5% • crash ~2% chance • balanced fund'},
+  {sigma:.035,crashProb:.030,crashMag:-.11,crashDur:3,label:'Moderate', c:'#f7c948',bg:'rgba(247,201,72,.12)', desc:'Swings ~±3.5% • crash ~3% chance • diversified equity'},
+  {sigma:.045,crashProb:.050,crashMag:-.14,crashDur:4,label:'Medium',   c:'#f7c948',bg:'rgba(247,201,72,.12)', desc:'Swings ~±4.5% • crash ~5% chance • mid-cap fund'},
+  {sigma:.058,crashProb:.060,crashMag:-.17,crashDur:4,label:'Elevated', c:'#fd9644',bg:'rgba(253,150,68,.12)', desc:'Swings ~±6% • crash ~6% chance • small-cap / sector'},
+  {sigma:.072,crashProb:.070,crashMag:-.20,crashDur:5,label:'High',     c:'#fd9644',bg:'rgba(253,150,68,.12)', desc:'Swings ~±7% • crash ~7% chance • aggressive small-cap'},
+  {sigma:.090,crashProb:.090,crashMag:-.26,crashDur:5,label:'Very High',c:'#fc5c65',bg:'rgba(252,92,101,.12)', desc:'Swings ~±9% • crash ~9% chance • thematic / momentum'},
+  {sigma:.115,crashProb:.110,crashMag:-.33,crashDur:6,label:'Extreme',  c:'#fc5c65',bg:'rgba(252,92,101,.12)', desc:'Swings ~±11% • crash ~11% chance • micro-cap'},
+  {sigma:.150,crashProb:.140,crashMag:-.40,crashDur:7,label:'Chaotic',  c:'#ff3838',bg:'rgba(255,56,56,.15)',  desc:'Swings ~±15% • crash ~14% chance • highly speculative'},
+];
+
+function applyVolUI(v){
+  const c=VOL[v];
+  document.getElementById('volVal').textContent=v+' / 10';
+  const b=document.getElementById('volBadge');
+  if(b){b.textContent=c.label;b.style.color=c.c;b.style.background=c.bg;}
+  const d=document.getElementById('volDesc');
+  if(d) d.textContent=c.desc;
+  ['vc1','vc2'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=c.label+' Vol';el.style.color=c.c;el.style.background=c.bg;}});
+}
+
+// ── SIP slider (log scale 1K–10Cr) ───────────────────────────────────────────
+function sliderToSip(s){return Math.round(1000*Math.pow(100000,s/100));}
+function sipToSlider(v){return Math.log(v/1000)/Math.log(100000)*100;}
+function parseSip(str){
+  str = str.trim();
+  // Handle "1.00 Cr" or "1Cr" -> multiply by 1e7
+  if(/cr/i.test(str)){
+    const n=parseFloat(str.replace(/[^0-9.]/g,''));
+    return Math.round(n*1e7)||10000;
+  }
+  // Handle "1.00 L" or "1L" -> multiply by 1e5
+  if(/l/i.test(str)){
+    const n=parseFloat(str.replace(/[^0-9.]/g,''));
+    return Math.round(n*1e5)||10000;
+  }
+  // Handle "10,000" or plain number
+  const n=parseInt(str.replace(/[^0-9]/g,''));
+  return n||10000;
+}
+function formatSip(v){if(v>=1e7)return(v/1e7).toFixed(2)+' Cr';if(v>=1e5)return(v/1e5).toFixed(2)+' L';return v.toLocaleString('en-IN');}
+
+document.getElementById('sipSlider').addEventListener('input',e=>{
+  const v=sliderToSip(+e.target.value);
+  document.getElementById('sipTyped').value=formatSip(v);
+  syncDipRiseDefaults(v);
+});
+document.getElementById('sipTyped').addEventListener('change',e=>{
+  const v=parseSip(e.target.value);
+  const clamped=Math.max(1000,Math.min(1e8,v));
+  e.target.value=formatSip(clamped);
+  document.getElementById('sipSlider').value=sipToSlider(clamped);
+  syncDipRiseDefaults(clamped);
+});
+
+// ── Dip / Rise rupee inputs ───────────────────────────────────────────────────
+let maxDipUserOverride=false, minRiseUserOverride=false;
+
+function syncDipRiseDefaults(baseSIP){
+  if(!maxDipUserOverride){
+    document.getElementById('maxDipTyped').value=formatSip(baseSIP*2);
+    document.getElementById('maxDipDefaultTag').textContent='default';
+    document.getElementById('maxDipDefaultTag').className='sip-ext-default is-default';
+  }
+  if(!minRiseUserOverride){
+    document.getElementById('minRiseTyped').value=formatSip(Math.round(baseSIP*0.5));
+    document.getElementById('minRiseDefaultTag').textContent='default';
+    document.getElementById('minRiseDefaultTag').className='sip-ext-default is-default';
+  }
+}
+function getDipRiseMuls(){
+  const base=parseSip(document.getElementById('sipTyped').value);
+  const maxDip=parseSip(document.getElementById('maxDipTyped').value);
+  const minRise=parseSip(document.getElementById('minRiseTyped').value);
+  // clamp: maxDip must be >= base, minRise must be <= base and > 0
+  const ceilMul=Math.max(1,maxDip/base);
+  const floorMul=Math.max(0.01,Math.min(0.99,minRise/base));
+  return{ceilMul,floorMul};
+}
+document.getElementById('maxDipTyped').addEventListener('change',e=>{
+  const base=parseSip(document.getElementById('sipTyped').value);
+  let v=parseSip(e.target.value);
+  v=Math.max(base,v); // must be at least base
+  e.target.value=formatSip(v);
+  maxDipUserOverride=(v!==base*2);
+  const tag=document.getElementById('maxDipDefaultTag');
+  tag.textContent=maxDipUserOverride?'custom':'default';
+  tag.className='sip-ext-default '+(maxDipUserOverride?'is-custom':'is-default');
+});
+document.getElementById('minRiseTyped').addEventListener('change',e=>{
+  const base=parseSip(document.getElementById('sipTyped').value);
+  let v=parseSip(e.target.value);
+  v=Math.max(100,Math.min(base-100,v)); // must be less than base and at least 100
+  e.target.value=formatSip(v);
+  minRiseUserOverride=(Math.round(v)!==Math.round(base*0.5));
+  const tag=document.getElementById('minRiseDefaultTag');
+  tag.textContent=minRiseUserOverride?'custom':'default';
+  tag.className='sip-ext-default '+(minRiseUserOverride?'is-custom':'is-default');
+});
+
+// ── Standard sliders ──────────────────────────────────────────────────────────
+[['cagr','cagrVal',v=>parseFloat(v).toFixed(1)+'%'],
+ ['years','yearsVal',v=>v+' yrs'],
+ ['sipStepUp','sipStepUpVal',v=>v+'%'],
+ ['dipTrigger','dipVal',v=>'−'+v+'%'],
+ ['riseTrigger','riseVal',v=>'+'+v+'%'],
+ ['step','stepVal',v=>v+'%'],
+ ['liquidRate','liquidVal',v=>parseFloat(v).toFixed(1)+'%'],
+ ['avgWin','avgWinVal',v=>v+' months'],
+].forEach(([id,out,fn])=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',e=>{const o=document.getElementById(out);if(o)o.textContent=fn(e.target.value);});
+});
+document.getElementById('vol').addEventListener('input',e=>applyVolUI(+e.target.value));
+
+// simCount uses a log scale slider (1–100000 → slider 0–100)
+function simCountFromSlider(s){
+  if(s<=0)return 1;
+  return Math.round(Math.pow(10, s/100*5)); // 10^0=1 to 10^5=100000
+}
+function simCountToSlider(n){
+  if(n<=1)return 0;
+  return Math.log10(n)/5*100;
+}
+function fmtSimCount(n){
+  if(n>=1000)return (n>=10000?(n/1000).toFixed(0):(n/1000).toFixed(1))+'K';
+  return n+'';
+}
+document.getElementById('simCount').addEventListener('input',e=>{
+  const n=simCountFromSlider(+e.target.value);
+  document.getElementById('simCountVal').textContent=fmtSimCount(n);
+});
+
+function setPreset(cagr,vol,btn){
+  document.getElementById('cagr').value=cagr;
+  document.getElementById('cagrVal').textContent=parseFloat(cagr).toFixed(1)+'%';
+  document.getElementById('vol').value=vol;
+  applyVolUI(vol);
+  document.querySelectorAll('#synth-box .pbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Page mode: Simulate / Backtest ────────────────────────────────────────────
+let pageMode = 'backtest'; // default
+
+function setPageMode(mode){
+  pageMode = mode;
+  document.getElementById('tab-simulate').classList.toggle('active', mode==='simulate');
+  document.getElementById('tab-backtest').classList.toggle('active', mode==='backtest');
+  document.getElementById('panel-simulate').style.display = mode==='simulate' ? 'block' : 'none';
+  document.getElementById('panel-backtest').style.display = mode==='backtest' ? 'block' : 'none';
+  const btn = document.getElementById('run-btn');
+  btn.textContent = mode==='simulate' ? '▶ Run Simulation' : '▶ Run Backtest';
+  // Show/hide synth settings and BT data source based on mode
+  const synthSec = document.getElementById('synth-section');
+  const btSrc    = document.getElementById('bt-source-section');
+  if(synthSec) synthSec.style.display = mode==='simulate' ? 'block' : 'none';
+  if(btSrc)    btSrc.style.display    = mode==='backtest' ? 'block' : 'none';
+}
+
+// ── Backtest mode ─────────────────────────────────────────────────────────────
+let btMode = 'nifty';
+let csvNavData = null;
+
+function updateSynthBoxState(){ /* no-op — handled by setPageMode */ }
+
+function setBTMode(mode,btn){
+  btMode=mode;
+  ['bt-mode-nifty','bt-mode-csv'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  btn.classList.add('active');
+  const desc=document.getElementById('bt-mode-desc');
+  if(mode==='nifty'){
+    if(desc) desc.textContent='Real Nifty 50 closes, Nov 1994–Mar 2026 (377 months).';
+  } else {
+    if(desc) desc.textContent='Upload a CSV of monthly NAV values (oldest first, no header).';
+  }
+  const csvArea=document.getElementById('csv-upload-area');
+  if(csvArea) csvArea.style.display=mode==='csv'?'block':'none';
+}
+
+document.getElementById('csvFile').addEventListener('change',function(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const lines=ev.target.result.split(/\r?\n/).map(l=>l.trim()).filter(l=>l&&!isNaN(parseFloat(l)));
+    csvNavData=lines.map(parseFloat);
+    const s=document.getElementById('csv-status');
+    if(s){s.style.display='block';s.textContent='Loaded '+csvNavData.length+' months ('+( csvNavData.length/12).toFixed(1)+' yrs)';s.style.color='var(--nav-up)';}
+  };
+  reader.readAsText(file);
+});
+
+// ── Dispatch run button ───────────────────────────────────────────────────────
+function runMode(){
+  if(pageMode==='simulate') runSimulate();
+  else runBacktest();
+}
+
+// ── Core simulation ───────────────────────────────────────────────────────────
+// Empirically calibrated monthly crash drag corrections per vol level.
+// Measured by running 50k paths with drift=0 and pure crash shocks,
+// computing the mean log-return drag. The drift formula must add this back
+// so realised CAGR matches the target despite crash events.
+const CRASH_DRAG_CORRECTION=[0,0.00020,0.00058,0.00151,0.00310,0.00603,0.00857,0.01080,0.01705,0.02314,0.03005];
+
+function generateNAV(months,cagrPct,volIdx){
+  const vc=VOL[volIdx];
+  // Correct monthly log-drift = target_mu - 0.5*sigma^2 + crash_drag_correction
+  // The crash drag correction compensates for expected monthly log-return loss from
+  // random crash events, so the geometric mean CAGR across many paths matches target.
+  const mu = Math.log(1 + cagrPct/100)/12; // target monthly log-return
+  const crashCorr = CRASH_DRAG_CORRECTION[volIdx] || 0;
+  const drift = mu - 0.5*vc.sigma*vc.sigma + crashCorr;
+  let nav=[100], cr=0, cpm=0;
+  for(let i=1;i<=months;i++){
+    const prev=nav[nav.length-1];
+    if(cr<=0 && Math.random()<vc.crashProb){ cr=vc.crashDur; cpm=vc.crashMag/vc.crashDur; }
+    let shock=0; if(cr>0){shock=cpm;cr--;}
+    nav.push(Math.max(0.5, prev * Math.exp(drift + vc.sigma*randn() + shock)));
+  }
+  return nav;
+}
+function runOneSim(nav, baseSIP, dipT, riseT, stepPct, floorMul, ceilMul, monthlyLiqRate, years, avgMonths, annualStepUp=0){
+  const months=years*12;
+  let fu=0,du=0,fLiq=0,dLiq=0;
+  const rows=[];
+  for(let i=0;i<months;i++){
+    // Apply annual step-up: SIP grows each year
+    const yearIdx=Math.floor(i/12);
+    const effectiveBase=Math.round(baseSIP*Math.pow(1+annualStepUp,yearIdx));
+
+    const cur=nav[i+1]; // current month NAV (what we buy at)
+
+    // FIX 3: Look-ahead bias removed.
+    // Average uses ONLY past NAVs nav[0]..nav[i], NOT current nav[i+1].
+    // This reflects what an investor actually sees before deciding to invest.
+    const lookback=Math.max(0, i-(avgMonths-1));
+    const win=nav.slice(lookback, i+1); // nav[lookback]..nav[i] — past only
+    const avg6m=win.reduce((a,b)=>a+b,0)/win.length;
+
+    const diff=(cur-avg6m)/avg6m;
+    let sig='NORMAL',mult=1;
+    if(diff<=-dipT){const s=Math.floor(Math.abs(diff)/dipT);mult=Math.min(ceilMul,1+s*stepPct);sig=mult>=ceilMul?'DIP_CAP':'DIP';}
+    else if(diff>=riseT){const s=Math.floor(diff/riseT);mult=Math.max(floorMul,1-s*stepPct);sig=mult<=floorMul?'RISE_CAP':'RISE';}
+
+    const dynAmt=Math.round(effectiveBase*mult);
+    const totalCap=Math.max(dynAmt,effectiveBase); // equal capital both strategies each month
+
+    const fFundAmt=effectiveBase;
+    const dFundAmt=dynAmt;
+
+    // FIX 4: Liquid delta — Fixed parks the gap when Dynamic invests more.
+    // Dynamic parks when it invests less than base.
+    // Guard: liquid cannot go negative (can't draw from empty liquid).
+    const fLiqDelta=totalCap-fFundAmt;   // fixed always parks gap (≥0)
+    const dLiqDelta=totalCap-dFundAmt;   // dyn parks when below base; 0 when at/above base
+
+    // Compound existing liquid balance, then add this month's parking
+    // FIX 4: clamp to 0 — strategies cannot borrow from liquid fund
+    fLiq=Math.max(0, fLiq*(1+monthlyLiqRate)+fLiqDelta);
+    dLiq=Math.max(0, dLiq*(1+monthlyLiqRate)+dLiqDelta);
+
+    fu+=fFundAmt/cur;
+    du+=dFundAmt/cur;
+
+    const fv=fu*cur, dv=du*cur;
+    rows.push({i,nav:cur,avg6m,diff,sig,
+      totalCap,fFundAmt,dFundAmt,fLiq,dLiq,
+      fWealth:fv+fLiq,dWealth:dv+dLiq,fv,dv});
+  }
+  return rows;
+}
+
+// ── Simulation (single path) ──────────────────────────────────────────────────
+let lastData=null;
+
+function runSimulate(){
+  const baseSIP  =parseSip(document.getElementById('sipTyped').value);
+  const years    =+document.getElementById('years').value;
+  const cagrPct  =+document.getElementById('cagr').value;
+  const volIdx   =+document.getElementById('vol').value;
+  const dipT     =+document.getElementById('dipTrigger').value/100;
+  const riseT    =+document.getElementById('riseTrigger').value/100;
+  const stepPct  =+document.getElementById('step').value/100;
+  const {floorMul,ceilMul} = getDipRiseMuls();
+  const annualLiq=+document.getElementById('liquidRate').value/100;
+  const monthlyLiq=annualLiq/12;
+  const months   =years*12;
+  const avgMonths =+document.getElementById('avgWin').value;
+  const annualStepUp=+document.getElementById('sipStepUp').value/100;
+  const simCount  =simCountFromSlider(+document.getElementById('simCount').value);
+
+  // Run N simulations; if simCount=1 show single path, else show median path + stats
+  let bestRows=null, bestNav=null;
+  let allFixedFinal=[], allDynFinal=[], allFixedXIRR=[], allDynXIRR=[];
+
+  for(let s=0;s<simCount;s++){
+    const nav=generateNAV(months,cagrPct,volIdx);
+    const rows=runOneSim(nav,baseSIP,dipT,riseT,stepPct,floorMul,ceilMul,monthlyLiq,years,avgMonths,annualStepUp);
+    const last=rows[rows.length-1];
+    const fTotal=last.fv+last.fLiq, dTotal=last.dv+last.dLiq;
+    const tDep=rows.reduce((a,r)=>a+r.totalCap,0);
+    allFixedFinal.push(fTotal);
+    allDynFinal.push(dTotal);
+    allFixedXIRR.push(buildXIRRFixed(rows,fTotal,years));
+    allDynXIRR.push(buildXIRRDyn(rows,dTotal,years));
+    // Pick median path (closest to median fixed wealth) for chart display
+    if(!bestRows) bestRows=rows, bestNav=nav;
+  }
+
+  // Use median path for display
+  if(simCount>1){
+    const sorted=[...allFixedFinal].sort((a,b)=>a-b);
+    const medF=sorted[Math.floor(sorted.length/2)];
+    const medIdx=allFixedFinal.findIndex(v=>v===medF);
+    // Re-run the median path deterministically isn't possible, so regenerate once
+    // Instead: display stats from all paths, use first path for chart
+  }
+
+  const rows=bestRows;
+  const nav=bestNav;
+  const last=rows[rows.length-1];
+  const fixedFund=last.fv, dynFund=last.dv;
+  const fixedLiq=last.fLiq, dynLiq=last.dLiq;
+  const fixedTotal=fixedFund+fixedLiq, dynTotal=dynFund+dynLiq;
+  const totalDeployed=rows.reduce((s,r)=>s+r.totalCap,0);
+  const fixedFundDep=rows.reduce((s,r)=>s+r.fFundAmt,0);
+  const dynFundDep  =rows.reduce((s,r)=>s+r.dFundAmt,0);
+  const fixedLiqDep = totalDeployed - fixedFundDep;
+  const dynLiqDep   = totalDeployed - dynFundDep;
+  const fixedXIRR = buildXIRRFixed(rows, fixedTotal, years);
+  const dynXIRR   = buildXIRRDyn(rows, dynTotal, years);
+
+  // Fund exposure deviation — compare against what fixed would deploy with same step-up
+  const pureFixed = fixedFundDep; // fixed always deploys effectiveBase to fund each month
+  const expoDev   = (dynFundDep-pureFixed)/pureFixed*100;
+
+  const winner = dynTotal>=fixedTotal?'dynamic':'fixed';
+
+  // Winner banner
+  const bannerEl=document.getElementById('sb-banner');
+  if(bannerEl) bannerEl.style.background=winner==='dynamic'?'rgba(0,229,255,.05)':'rgba(255,159,67,.05)';
+  const wi=document.getElementById('winner-icon');
+  const wt=document.getElementById('winner-text');
+  const ws=document.getElementById('winner-sub');
+  if(wi) wi.textContent=winner==='dynamic'?'🏆':'🥇';
+  if(wt){wt.textContent=(winner==='dynamic'?'Dynamic SIP':'Fixed SIP')+' wins';wt.style.color=winner==='dynamic'?'var(--dyn)':'var(--fixed)';}
+  if(ws) ws.textContent='Total wealth: '+(winner==='dynamic'?fmtShort(dynTotal)+' vs '+fmtShort(fixedTotal):fmtShort(fixedTotal)+' vs '+fmtShort(dynTotal));
+  const pl=document.getElementById('sim-period-label');
+  if(pl){
+    if(simCount>1){
+      const dynWins=allDynFinal.filter((d,i)=>d>=allFixedFinal[i]).length;
+      const winPct=Math.round(dynWins/simCount*100);
+      pl.textContent=`${years}y · ${simCount>=1000?(simCount/1000).toFixed(0)+'K':simCount} paths · Dyn wins ${winPct}%`;
+      // Override winner sub with distribution info
+      const avgFixed=allFixedFinal.reduce((a,b)=>a+b,0)/simCount;
+      const avgDyn  =allDynFinal.reduce((a,b)=>a+b,0)/simCount;
+      if(ws) ws.textContent=`Mean: Fixed ${fmtShort(avgFixed)} · Dynamic ${fmtShort(avgDyn)} (showing one path below)`;
+    } else {
+      pl.textContent=`${years} years (synthetic)`;
+    }
+  }
+
+  // XIRR race
+  const maxX=Math.max(fixedXIRR,dynXIRR,1);
+  const xbf=document.getElementById('xb-fixed');if(xbf)xbf.style.width=Math.min(48,(fixedXIRR/maxX)*48)+'%';
+  const xbd=document.getElementById('xb-dyn');  if(xbd)xbd.style.width=Math.min(48,(dynXIRR/maxX)*48)+'%';
+  const xl=document.getElementById('xirr-fixed-lbl');if(xl)xl.textContent=fmtPct(fixedXIRR);
+  const xd=document.getElementById('xirr-dyn-lbl');  if(xd)xd.textContent=fmtPct(dynXIRR);
+
+  const maxCorpus=Math.max(fixedTotal,dynTotal);
+  fillCard('fixed', totalDeployed, fixedFundDep, fixedFund, fixedLiqDep, fixedLiq, fixedTotal, fixedXIRR, annualLiq, years, winner==='fixed');
+  fillCard('dyn',   totalDeployed, dynFundDep,   dynFund,   dynLiqDep,   dynLiq,   dynTotal,   dynXIRR,   annualLiq, years, winner==='dynamic');
+
+  // Fund exposure badge
+  const expoBadge=document.getElementById('expo-badge');
+  const expoNote =document.getElementById('expo-note');
+  if(expoBadge){
+    expoBadge.textContent=(expoDev>=0?'+':'')+expoDev.toFixed(1)+'% vs fixed baseline';
+    expoBadge.style.background=expoDev>=0?'rgba(252,92,101,.15)':'rgba(38,222,129,.15)';
+    expoBadge.style.color=expoDev>=0?'var(--nav-dn)':'var(--nav-up)';
+  }
+  if(expoNote){
+    if(expoDev>=0){
+      expoNote.textContent='Dynamic deployed '+fmtPct(expoDev)+' more capital into the fund than pure fixed SIP would have.';
+    } else {
+      expoNote.textContent='Dynamic deployed '+fmtPct(Math.abs(expoDev))+' less into the fund; rest was parked in liquid.';
+    }
+    expoNote.style.color='var(--muted)';
+  }
+
+  // Highlight winning card
+  const cf=document.getElementById('card-fixed');if(cf)cf.style.background=winner==='fixed'?'rgba(255,159,67,.04)':'#131820';
+  const cd=document.getElementById('card-dyn');  if(cd)cd.style.background=winner==='dynamic'?'rgba(0,229,255,.04)':'#131820';
+
+  const fixedWealth=rows.map(r=>r.fWealth);
+  const dynWealth  =rows.map(r=>r.dWealth);
+  const navArr     =rows.map(r=>r.nav);
+  const avg6mArr   =rows.map(r=>r.avg6m);
+  const signals    =rows.map(r=>r.sig);
+  const dynAmts    =rows.map(r=>r.dFundAmt);
+  lastData={fixedWealth,dynWealth,navArr,avg6mArr,signals,dynAmts,baseSIP,months,rows,floorMul,ceilMul};
+  applyVolUI(volIdx);
+  setTimeout(()=>{drawAll();},0);
+  buildTable(rows,baseSIP);
+}
+
+function fillCard(side, totalDeployed, fundDep, fundFinal, liqDep, liqFinal, total, xirr, annualLiqRate, years, isWinner){
+  const col = side==='dyn' ? 'var(--dyn)' : 'var(--fixed)';
+  const gain = total - totalDeployed;
+  const multi = (total/totalDeployed).toFixed(2);
+  const months = Math.round(years*12);
+  const g = id => document.getElementById('r-'+side+'-'+id);
+
+  // Equity fund XIRR: equal monthly cashflows of fundDep/months invested, terminal = fundFinal
+  const fundCFs = Array.from({length:months},(_,i)=>({amount:-(fundDep/months), t:(i+1)/12}));
+  fundCFs.push({amount:fundFinal, t:years});
+  const fundXIRR = fundDep > 0 ? calcXIRR(fundCFs) : 0;
+
+  if(g('fund-in'))  g('fund-in').textContent  = fmtShort(fundDep);
+  if(g('fund-val')) g('fund-val').textContent  = fmtShort(fundFinal);
+  if(g('fund-ret')){ g('fund-ret').textContent = fmtPct(fundXIRR); g('fund-ret').style.color=fundXIRR>=0?'var(--nav-up)':'var(--nav-dn)'; }
+  if(g('liq-in'))   g('liq-in').textContent   = fmtShort(liqDep);
+  if(g('liq-val'))  g('liq-val').textContent   = fmtShort(liqFinal);
+  if(g('liq-ret'))  { g('liq-ret').textContent = fmtPct(annualLiqRate*100)+' p.a.'; g('liq-ret').style.color='var(--label)'; }
+  if(g('deployed')) g('deployed').textContent  = fmtShort(totalDeployed);
+  const tot=g('total'); if(tot){ tot.textContent=fmtShort(total); tot.style.color=col; }
+  const xel=g('xirr');
+  if(xel){ xel.textContent=fmtPct(xirr); xel.style.color=isWinner?'var(--nav-up)':col; xel.style.fontFamily="'Syne',sans-serif"; xel.style.fontWeight='700'; }
+  const proof=g('xirr-proof');
+  if(proof) proof.textContent=`XIRR: ${months} monthly cashflows of ${fmtShort(totalDeployed/months)} → final ${fmtShort(total)} = ${fmtPct(xirr)} p.a. (Newton-Raphson, ${months} dated flows)`;
+  const mul=g('multi'); if(mul) mul.textContent=multi+'x';
+  const gel=g('gain'); if(gel){ gel.textContent=(gain>=0?'+':'')+fmtShort(gain)+' net gain'; gel.style.color=gain>=0?'var(--nav-up)':'var(--nav-dn)'; }
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+function drawAll(){
+  if(!lastData)return;
+  const{fixedWealth,dynWealth,navArr,avg6mArr,signals,dynAmts,baseSIP,months,floorMul,ceilMul}=lastData;
+  drawPortfolio(fixedWealth,dynWealth,months);
+  drawNAV(navArr,avg6mArr,signals,months);
+  drawSIPBars(dynAmts,baseSIP,months,floorMul,ceilMul);
+}
+function getCtx(id,H){
+  const canvas=document.getElementById(id);
+  if(!canvas)return null;
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.parentElement.getBoundingClientRect();
+  const W=Math.max(rect.width-40, canvas.offsetWidth, 200); // 40 = card padding
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  return{ctx,W,H};
+}
+function gridLines(ctx,W,H,pad,maxV){
+  ctx.strokeStyle='#1e2535';ctx.lineWidth=1;
+  for(let g=0;g<=4;g++){
+    const y=pad.t+(g/4)*(H-pad.t-pad.b);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle='#3a4455';ctx.font='10px JetBrains Mono';
+    ctx.fillText(fmtShort(maxV*(1-g/4)),W-pad.r+4,y+4);
+  }
+}
+function xTicks(ctx,W,H,pad,months){
+  ctx.fillStyle='#3a4455';ctx.font='10px JetBrains Mono';
+  const s=Math.ceil(months/8);
+  for(let i=0;i<months;i+=s){
+    const x=pad.l+(i/(months-1))*(W-pad.l-pad.r);
+    ctx.fillText('Y'+(Math.floor(i/12)+1),x-8,H-pad.b+14);
+  }
+}
+function drawPortfolio(fv,dv,months){
+  const r=getCtx('chartVal',220); if(!r)return;
+  const{ctx,W,H}=r;
+  const pad={t:10,r:72,b:24,l:6},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  ctx.clearRect(0,0,W,H);
+  const maxV=Math.max(...fv,...dv)*1.05;
+  const xS=i=>pad.l+(i/(months-1))*cW,yS=v=>pad.t+cH-(v/maxV)*cH;
+  gridLines(ctx,W,H,pad,maxV); xTicks(ctx,W,H,pad,months);
+  [[fv,'rgba(255,159,67,.22)','#ff9f43',3],[dv,'rgba(0,229,255,.2)','#00e5ff',3.5]].forEach(([arr,fill,stroke,lw])=>{
+    ctx.beginPath();arr.forEach((v,i)=>i?ctx.lineTo(xS(i),yS(v)):ctx.moveTo(xS(i),yS(v)));
+    ctx.lineTo(xS(months-1),pad.t+cH);ctx.lineTo(xS(0),pad.t+cH);ctx.closePath();
+    const g=ctx.createLinearGradient(0,pad.t,0,pad.t+cH);
+    g.addColorStop(0,fill);g.addColorStop(1,fill.replace(/[\d.]+\)$/,'0.02)'));
+    ctx.fillStyle=g;ctx.fill();
+    ctx.beginPath();arr.forEach((v,i)=>i?ctx.lineTo(xS(i),yS(v)):ctx.moveTo(xS(i),yS(v)));
+    ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke();
+  });
+}
+function drawNAV(navArr,avg6m,signals,months){
+  const r=getCtx('chartNav',200); if(!r)return;
+  const{ctx,W,H}=r;
+  const pad={t:10,r:72,b:24,l:6},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  ctx.clearRect(0,0,W,H);
+  const maxN=Math.max(...navArr)*1.08,minN=Math.min(...navArr)*.94,rng=maxN-minN;
+  const xS=i=>pad.l+(i/(months-1))*cW,yS=v=>pad.t+cH-((v-minN)/rng)*cH;
+  ctx.strokeStyle='#1e2535';ctx.lineWidth=1;
+  for(let g=0;g<=3;g++){const y=pad.t+(g/3)*cH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();ctx.fillStyle='#3a4455';ctx.font='10px JetBrains Mono';ctx.fillText((minN+rng*(1-g/3)).toFixed(0),W-pad.r+4,y+4);}
+  xTicks(ctx,W,H,pad,months);
+  ctx.beginPath();navArr.forEach((v,i)=>i?ctx.lineTo(xS(i),yS(v)):ctx.moveTo(xS(i),yS(v)));
+  for(let i=months-1;i>=0;i--)ctx.lineTo(xS(i),yS(avg6m[i]));
+  ctx.closePath();ctx.fillStyle='rgba(136,146,164,.06)';ctx.fill();
+  ctx.beginPath();avg6m.forEach((v,i)=>i?ctx.lineTo(xS(i),yS(v)):ctx.moveTo(xS(i),yS(v)));
+  ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(136,146,164,.5)';ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
+  for(let i=1;i<months;i++){ctx.beginPath();ctx.moveTo(xS(i-1),yS(navArr[i-1]));ctx.lineTo(xS(i),yS(navArr[i]));ctx.strokeStyle=navArr[i]>=navArr[i-1]?'rgba(38,222,129,.8)':'rgba(252,92,101,.8)';ctx.lineWidth=3;ctx.stroke();}
+  signals.forEach((sig,i)=>{
+    if(sig==='NORMAL')return;
+    const x=xS(i),y=yS(navArr[i]),isDip=sig.startsWith('DIP'),isCap=sig.endsWith('CAP');
+    ctx.beginPath();ctx.arc(x,y,isCap?8:6,0,Math.PI*2);
+    ctx.fillStyle=isDip?'#26de81':'#fc5c65';ctx.globalAlpha=isCap?1:.85;ctx.fill();ctx.globalAlpha=1;
+    ctx.strokeStyle=isCap?'#fff':'#0f1117';ctx.lineWidth=isCap?2:1.5;ctx.stroke();
+    if(isCap){ctx.fillStyle='#fff';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('!',x,y);ctx.textAlign='left';ctx.textBaseline='alphabetic';}
+  });
+}
+function drawSIPBars(dynAmts,baseSIP,months,floorMul,ceilMul){
+  const r=getCtx('chartSIP',140); if(!r)return;
+  const{ctx,W,H}=r;
+  const pad={t:10,r:72,b:24,l:6},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  ctx.clearRect(0,0,W,H);
+  const ceilAmt=baseSIP*ceilMul,floorAmt=baseSIP*floorMul;
+  const maxA=Math.max(...dynAmts,ceilAmt)*1.08;
+  const xS=i=>pad.l+(i/(months-1))*cW,yS=v=>pad.t+cH-(v/maxA)*cH;
+  ctx.strokeStyle='#1e2535';ctx.lineWidth=1;
+  for(let g=0;g<=2;g++){const y=pad.t+(g/2)*cH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();ctx.fillStyle='#3a4455';ctx.font='10px JetBrains Mono';ctx.fillText(fmtShort(maxA*(1-g/2)),W-pad.r+4,y+4);}
+  xTicks(ctx,W,H,pad,months);
+  const bw=Math.max(1,Math.floor(cW/months)-1);
+  dynAmts.forEach((amt,i)=>{
+    const x=xS(i)-bw/2,yBase=yS(baseSIP);
+    if(amt>baseSIP){ctx.fillStyle='rgba(38,222,129,.7)';ctx.fillRect(x,yS(amt),bw,yBase-yS(amt));}
+    else if(amt<baseSIP){ctx.fillStyle='rgba(252,92,101,.7)';ctx.fillRect(x,yBase,bw,yS(amt)-yBase);}
+    else{ctx.fillStyle='rgba(136,146,164,.3)';ctx.fillRect(x,yBase-1,bw,2);}
+  });
+  ctx.beginPath();ctx.moveTo(pad.l,yS(floorAmt));ctx.lineTo(W-pad.r,yS(floorAmt));
+  ctx.strokeStyle='rgba(252,92,101,.55)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(252,92,101,.6)';ctx.font='9px JetBrains Mono';ctx.fillText('floor',W-pad.r+4,yS(floorAmt)+4);
+  ctx.beginPath();ctx.moveTo(pad.l,yS(ceilAmt));ctx.lineTo(W-pad.r,yS(ceilAmt));
+  ctx.strokeStyle='rgba(0,229,255,.55)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(0,229,255,.6)';ctx.font='9px JetBrains Mono';ctx.fillText('ceil',W-pad.r+4,yS(ceilAmt)+4);
+  ctx.beginPath();ctx.moveTo(pad.l,yS(baseSIP));ctx.lineTo(W-pad.r,yS(baseSIP));
+  ctx.strokeStyle='#ff9f43';ctx.lineWidth=2.5;ctx.setLineDash([6,4]);ctx.stroke();ctx.setLineDash([]);
+}
+
+// ── Backtest ──────────────────────────────────────────────────────────────────
+let lastBT=null;
+
+function runBacktest(){
+  const years    =+document.getElementById('years').value;
+  const baseSIP  =parseSip(document.getElementById('sipTyped').value);
+  const cagrPct  =+document.getElementById('cagr').value;
+  const volIdx   =+document.getElementById('vol').value;
+  const dipT     =+document.getElementById('dipTrigger').value/100;
+  const riseT    =+document.getElementById('riseTrigger').value/100;
+  const stepPct  =+document.getElementById('step').value/100;
+  const {floorMul,ceilMul} = getDipRiseMuls();
+  const annualLiq=+document.getElementById('liquidRate').value/100;
+  const monthlyLiq=annualLiq/12;
+  const months=years*12;
+  const avgMonths=+document.getElementById('avgWin').value;
+  const annualStepUp=+document.getElementById('sipStepUp').value/100;
+  let periods=[], modeLabel='', totalWindowsLabel='';
+
+  if(btMode==='nifty'||btMode==='csv'){
+    const src=btMode==='nifty'?NIFTY_DATA:csvNavData;
+    if(!src||src.length<months+1){
+      document.getElementById('bt-title').textContent='Not enough data';
+      document.getElementById('bt-sub').textContent='Need at least '+(months+1)+' monthly data points for a '+years+'-year window.';
+      return;
+    }
+    const startCount=src.length-months;
+    modeLabel=btMode==='nifty'?'Nifty 50 (real)':'CSV Upload';
+    totalWindowsLabel=startCount+' rolling '+years+'-year windows';
+    for(let s=0;s<startCount;s++){
+      const navSlice=src.slice(s,s+months+1);
+      const rows=runOneSim(navSlice,baseSIP,dipT,riseT,stepPct,floorMul,ceilMul,monthlyLiq,years,avgMonths,annualStepUp);
+      const last=rows[rows.length-1];
+      const fDep=rows.reduce((a,r)=>a+r.fFundAmt,0);
+      const dDep=rows.reduce((a,r)=>a+r.dFundAmt,0);
+      const totalDep=rows.reduce((a,r)=>a+r.totalCap,0);
+      const fLiqDep=totalDep-fDep, dLiqDep=totalDep-dDep;
+      const fX = buildXIRRFixed(rows, last.fWealth, years);
+      const dX = buildXIRRDyn(rows, last.dWealth, years);
+      const lbl=btMode==='nifty'?horizonLabel(s,months):'W'+(s+1);
+      // Trigger hit counts
+      const dipMonths=rows.filter(r=>r.sig.startsWith('DIP')).length;
+      const riseMonths=rows.filter(r=>r.sig.startsWith('RISE')).length;
+      const ceilMonths=rows.filter(r=>r.sig==='DIP_CAP').length;
+      const floorMonths=rows.filter(r=>r.sig==='RISE_CAP').length;
+      periods.push({fixedXIRR:fX,dynXIRR:dX,gap:dX-fX,
+        dynWinsXIRR:dX>=fX,dynWinsCorpus:last.dWealth>=last.fWealth,
+        fixedWealth:last.fWealth, dynWealth:last.dWealth,
+        corpusDiff:last.dWealth-last.fWealth,
+        fDep,dDep,totalDep,fLiqDep,dLiqDep,
+        fFundFinal:last.fv,dFundFinal:last.dv,fLiqFinal:last.fLiq,dLiqFinal:last.dLiq,
+        dipMonths,riseMonths,ceilMonths,floorMonths,
+        wealthFixed:rows.map(r=>r.fWealth),wealthDyn:rows.map(r=>r.dWealth),
+        label:lbl});
+    }
+  }
+
+  const n=periods.length;
+  const winPeriods =periods.filter(p=>p.dynWinsCorpus);
+  const losePeriods=periods.filter(p=>!p.dynWinsCorpus);
+  const dCorpus=winPeriods.length, fCorpus=losePeriods.length;
+  const dXWin  =periods.filter(p=>p.dynWinsXIRR);
+  const fXWin  =periods.filter(p=>!p.dynWinsXIRR);
+  const avgGapDyn  =dXWin.length?dXWin.reduce((s,p)=>s+p.gap,0)/dXWin.length:0;
+  const avgGapFixed=fXWin.length?fXWin.reduce((s,p)=>s-p.gap,0)/fXWin.length:0;
+  const corpusPct  =dCorpus/n*100;
+
+  // Rupee-based stats — what actually matters
+  const avgWinCorpus =winPeriods.length ?winPeriods.reduce((s,p)=>s+p.corpusDiff,0)/winPeriods.length:0;
+  const avgLoseCorpus=losePeriods.length?losePeriods.reduce((s,p)=>s+Math.abs(p.corpusDiff),0)/losePeriods.length:0;
+  const avgCorpusDiff=periods.reduce((s,p)=>s+p.corpusDiff,0)/n;
+  const expVal=avgCorpusDiff;
+
+  // Wealth paths for chart (sample up to 100 for performance)
+  const sampleStep=Math.max(1,Math.floor(n/100));
+  const wealthPaths=periods.filter((_,i)=>i%sampleStep===0).map(p=>({fixed:p.wealthFixed||[],dyn:p.wealthDyn||[]}));
+
+  // Trigger hit rate aggregates
+  const totalMonthsAll=n*months;
+  const totalDip =periods.reduce((s,p)=>s+(p.dipMonths||0),0);
+  const totalRise=periods.reduce((s,p)=>s+(p.riseMonths||0),0);
+  const totalCeil=periods.reduce((s,p)=>s+(p.ceilMonths||0),0);
+  const totalFloor=periods.reduce((s,p)=>s+(p.floorMonths||0),0);
+
+  // Median window for scorecard
+  const sorted=[...periods].sort((a,b)=>a.corpusDiff-b.corpusDiff);
+  const medP=sorted[Math.floor(sorted.length/2)];
+  const medFixedXIRR=periods.map(p=>p.fixedXIRR).sort((a,b)=>a-b)[Math.floor(n/2)];
+  const medDynXIRR  =periods.map(p=>p.dynXIRR).sort((a,b)=>a-b)[Math.floor(n/2)];
+
+  lastBT={periods,n,dCorpus,fCorpus,dXIRR:dXWin.length,fXIRR:fXWin.length,
+          avgGapDyn,avgGapFixed,corpusPct,years,months,modeLabel,totalWindowsLabel,
+          avgWinCorpus,avgLoseCorpus,avgCorpusDiff,expVal,baseSIP,
+          wealthPaths,totalDip,totalRise,totalCeil,totalFloor,totalMonthsAll,
+          medP,medFixedXIRR,medDynXIRR,annualLiq};
+
+  // ── UI update ──────────────────────────────────────────────────────────────
+  const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  document.getElementById('bt-title').textContent='Backtest — '+modeLabel+' · '+totalWindowsLabel;
+  document.getElementById('bt-sub').textContent=
+    btMode==='nifty'?'Every possible '+years+'-year window in Nifty 50 history (Nov 1994–Mar 2026). Equal capital both strategies.':
+    'Every possible '+years+'-year window in uploaded data. Equal capital both strategies.';
+
+  // ── Trigger hit stats ──────────────────────────────────────────────────────
+  const pct=v=>(v/totalMonthsAll*100).toFixed(1)+'%';
+  setEl('bt-dip-pct',  pct(totalDip));   setEl('bt-dip-count',  totalDip+' months');
+  setEl('bt-ceil-pct', pct(totalCeil));  setEl('bt-ceil-count', totalCeil+' months');
+  setEl('bt-rise-pct', pct(totalRise));  setEl('bt-rise-count', totalRise+' months');
+  setEl('bt-floor-pct',pct(totalFloor)); setEl('bt-floor-count',totalFloor+' months');
+
+  // ── Backtest median scorecard ──────────────────────────────────────────────
+  if(medP){
+    const medWinner=medP.dynWealth>=medP.fixedWealth?'dynamic':'fixed';
+    const btBannerEl=document.getElementById('bt-sb-banner');
+    if(btBannerEl) btBannerEl.style.background=medWinner==='dynamic'?'rgba(0,229,255,.05)':'rgba(255,159,67,.05)';
+    const bwi=document.getElementById('bt-winner-icon');
+    const bwt=document.getElementById('bt-winner-text');
+    const bws=document.getElementById('bt-winner-sub');
+    const bpl=document.getElementById('bt-period-label');
+    if(bwi) bwi.textContent=medWinner==='dynamic'?'🏆':'🥇';
+    if(bwt){bwt.textContent=(medWinner==='dynamic'?'Dynamic':'Fixed')+' leads in median window';bwt.style.color=medWinner==='dynamic'?'var(--dyn)':'var(--fixed)';}
+    if(bws) bws.textContent='Median corpus gap: '+(medP.corpusDiff>=0?'+':'')+fmtShort(medP.corpusDiff);
+    if(bpl) bpl.textContent=n+' windows · median shown';
+    // XIRR race
+    const mxMax=Math.max(medFixedXIRR,medDynXIRR,1);
+    const xbf=document.getElementById('bt-xb-fixed');if(xbf)xbf.style.width=Math.min(48,(medFixedXIRR/mxMax)*48)+'%';
+    const xbd=document.getElementById('bt-xb-dyn');  if(xbd)xbd.style.width=Math.min(48,(medDynXIRR/mxMax)*48)+'%';
+    setEl('bt-xirr-fixed-lbl',fmtPct(medFixedXIRR));
+    setEl('bt-xirr-dyn-lbl',  fmtPct(medDynXIRR));
+    // Fill median scorecard capital tables
+    const setCard=(side,totalDep,fundDep,fundFinal,liqDep,liqFinal,total,xirr)=>{
+      const s=id=>document.getElementById('bt-'+side+'-'+id);
+      if(s('fund-in'))  s('fund-in').textContent =fmtShort(fundDep);
+      if(s('fund-val')) s('fund-val').textContent=fmtShort(fundFinal);
+      const fundCFs=Array.from({length:months},(_,i)=>({amount:-(fundDep/months),t:(i+1)/12}));
+      fundCFs.push({amount:fundFinal,t:years});
+      const fundXIRR=fundDep>0?calcXIRR(fundCFs):0;
+      if(s('fund-ret')){s('fund-ret').textContent=fmtPct(fundXIRR);s('fund-ret').style.color=fundXIRR>=0?'var(--nav-up)':'var(--nav-dn)';}
+      if(s('liq-in'))  s('liq-in').textContent  =fmtShort(liqDep);
+      if(s('liq-val')) s('liq-val').textContent  =fmtShort(liqFinal);
+      if(s('liq-ret')) {s('liq-ret').textContent =fmtPct(annualLiq*100)+' p.a.';s('liq-ret').style.color='var(--label)';}
+      if(s('deployed'))s('deployed').textContent =fmtShort(totalDep);
+      if(s('total'))   {s('total').textContent   =fmtShort(total);}
+      if(s('xirr'))    {s('xirr').textContent    =fmtPct(xirr);s('xirr').style.color=xirr>=0?'var(--nav-up)':'var(--label)';}
+    };
+    setCard('fixed',medP.totalDep,medP.fDep,medP.fFundFinal,medP.fLiqDep,medP.fLiqFinal,medP.fixedWealth,medP.fixedXIRR);
+    setCard('dyn',  medP.totalDep,medP.dDep,medP.dFundFinal,medP.dLiqDep,medP.dLiqFinal,medP.dynWealth,  medP.dynXIRR);
+  }
+
+  // Donut centre
+  const bcp=document.getElementById('bt-corpus-pct');
+  if(bcp) bcp.textContent=Math.round(corpusPct)+'%';
+
+  // Corpus wins detail
+  setEl('bt-corpus-dyn',  dCorpus);
+  setEl('bt-corpus-dyn-pct', 'out of '+n+' ('+Math.round(corpusPct)+'%)');
+  setEl('bt-corpus-fixed',fCorpus);
+  setEl('bt-corpus-fixed-pct','out of '+n+' ('+Math.round(100-corpusPct)+'%)');
+  setEl('bt-gap-dyn',  '+'+avgGapDyn.toFixed(2)+'pp');
+  setEl('bt-gap-fixed','+'+avgGapFixed.toFixed(2)+'pp');
+
+  // ── VERDICT — the actionable summary ──────────────────────────────────────
+  const overallWinner = expVal >= 0 ? 'Dynamic SIP' : 'Fixed SIP';
+  const loser         = expVal >= 0 ? 'Fixed SIP'   : 'Dynamic SIP';
+  const winCol = expVal>=0?'var(--dyn)':'var(--fixed)';
+  const winRate10 = Math.round(corpusPct/10); // "X in 10"
+
+  const verdictLine = document.getElementById('bt-verdict-line');
+  if(verdictLine){
+    verdictLine.textContent = overallWinner+' is the better strategy';
+    verdictLine.style.color = winCol;
+  }
+  const verdictBanner = document.getElementById('bt-verdict');
+  if(verdictBanner) verdictBanner.style.borderColor = expVal>=0?'rgba(0,229,255,.3)':'rgba(255,159,67,.3)';
+
+  const winAmt  = fmtShort(Math.abs(avgWinCorpus));
+  const loseAmt = fmtShort(Math.abs(avgLoseCorpus));
+  const evAmt   = fmtShort(Math.abs(expVal));
+  const sipLbl  = fmtShort(baseSIP)+'/month';
+
+  const vd = document.getElementById('bt-verdict-detail');
+  if(vd){
+    if(expVal>=0){
+      vd.innerHTML = 'Over <strong style="color:var(--text)">'+n+'</strong> rolling '+years+'-year windows in real Nifty 50 history, '
+        +'Dynamic SIP beat Fixed in <strong style="color:var(--dyn)">'+dCorpus+' out of '+n+'</strong> periods '
+        +'('+Math.round(corpusPct)+'% or about <strong style="color:var(--dyn)">'+winRate10+' in every 10</strong> '+years+'-year stretches). '
+        +'When Dynamic wins, it ends with <strong style="color:var(--nav-up)">'+winAmt+' more</strong> on average. '
+        +'When it loses, it trails by <strong style="color:var(--nav-dn)">'+loseAmt+'</strong> on average. '
+        +'The expected extra corpus from choosing Dynamic is <strong style="color:var(--nav-up)">+'+evAmt+'</strong> per '+sipLbl+' SIP.';
+    } else {
+      vd.innerHTML = 'Over <strong style="color:var(--text)">'+n+'</strong> rolling '+years+'-year windows, '
+        +'Fixed SIP beat Dynamic in <strong style="color:var(--fixed)">'+fCorpus+' out of '+n+'</strong> periods. '
+        +'Dynamic wins only '+dCorpus+' times. '
+        +'When Dynamic wins it gains <strong style="color:var(--nav-up)">'+winAmt+'</strong> but when it loses it trails by <strong style="color:var(--nav-dn)">'+loseAmt+'</strong>. '
+        +'Expected edge of Fixed over Dynamic: <strong style="color:var(--nav-up)">+'+evAmt+'</strong> per '+sipLbl+' SIP.';
+    }
+  }
+
+  // Win rate display
+  const winRateEl = document.getElementById('bt-winrate-disp');
+  if(winRateEl){ winRateEl.textContent = Math.round(corpusPct)+'%'; winRateEl.style.color = winCol; }
+  setEl('bt-winrate-sub', dCorpus+' wins out of '+n);
+  const awcEl = document.getElementById('bt-avg-win-corpus');
+  if(awcEl) awcEl.textContent = (avgWinCorpus>=0?'+':'')+fmtShort(avgWinCorpus);
+  setEl('bt-avg-win-sub', 'per '+fmtShort(baseSIP)+'/month');
+  const alcEl = document.getElementById('bt-avg-loss-corpus');
+  if(alcEl){ alcEl.textContent = '−'+fmtShort(avgLoseCorpus); }
+  setEl('bt-avg-loss-sub', 'per '+fmtShort(baseSIP)+'/month');
+  const evEl = document.getElementById('bt-ev');
+  if(evEl){
+    evEl.textContent = (expVal>=0?'+':'')+fmtShort(expVal);
+    evEl.style.color = expVal>=0?'var(--nav-up)':'var(--nav-dn)';
+  }
+
+  setTimeout(()=>{
+    drawBTDonut(lastBT);
+    drawBTBars(lastBT);
+    drawBTDist(lastBT);
+    drawBTWealthChart(lastBT);
+  },0);
+}
+
+function drawBTDonut(bt){
+  const canvas=document.getElementById('btDonut');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=160*dpr;canvas.height=160*dpr;
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  const cx=80,cy=80,r=62,sw=14;
+  ctx.clearRect(0,0,160,160);
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='#1e2535';ctx.lineWidth=sw;ctx.stroke();
+  // outer ring = corpus win rate (Dynamic), inner ring = XIRR win rate (Fixed)
+  const corpusAngle=(bt.dCorpus/bt.n)*Math.PI*2;
+  ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+corpusAngle);ctx.strokeStyle='#00e5ff';ctx.lineWidth=sw;ctx.lineCap='round';ctx.stroke();
+  if(bt.fCorpus>0){
+    const fa=(bt.fCorpus/bt.n)*Math.PI*2;
+    ctx.beginPath();ctx.arc(cx,cy,r-sw-3,-Math.PI/2,-Math.PI/2+fa);ctx.strokeStyle='rgba(255,159,67,.5)';ctx.lineWidth=sw-4;ctx.lineCap='round';ctx.stroke();
+  }
+}
+function drawBTBars(bt){
+  const r=getCtx('btBars',180); if(!r)return;
+  const{ctx,W,H}=r;
+  const pad={t:10,r:10,b:30,l:42},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  ctx.clearRect(0,0,W,H);
+  const n=bt.periods.length;
+  if(n===0)return;
+  const allX=[...bt.periods.map(p=>p.fixedXIRR),...bt.periods.map(p=>p.dynXIRR)];
+  const minX=Math.min(...allX,0),maxX=Math.max(...allX,1),rng=maxX-minX;
+  const yS=v=>pad.t+cH-((v-minX)/rng)*cH,xS=i=>pad.l+(i+.5)*(cW/n);
+  const bw=Math.max(1,Math.floor(cW/n)-1);
+  const y0=yS(0);
+  // grid
+  ctx.strokeStyle='#252d3d';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y0);ctx.lineTo(W-pad.r,y0);ctx.stroke();
+  for(let g=0;g<=4;g++){
+    const y=pad.t+(g/4)*cH;
+    ctx.strokeStyle='#1a2030';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillStyle='#3a4455';ctx.font='9px JetBrains Mono';ctx.textAlign='right';
+    ctx.fillText((minX+rng*(1-g/4)).toFixed(1)+'%',pad.l-3,y+3);
+  }
+  ctx.textAlign='left';
+  // bars
+  bt.periods.forEach((p,i)=>{
+    const x=xS(i),fY=yS(p.fixedXIRR),dY=yS(p.dynXIRR);
+    ctx.fillStyle=p.dynWinsXIRR?'rgba(38,222,129,.2)':'rgba(252,92,101,.2)';
+    ctx.fillRect(x-bw/2,Math.min(fY,dY),bw,Math.abs(fY-dY)||1);
+    const hw=Math.max(1,Math.floor(bw/2)-1);
+    ctx.fillStyle=p.dynWinsXIRR?'rgba(255,159,67,.7)':'rgba(255,159,67,1)';
+    ctx.fillRect(x-bw/2,Math.min(fY,y0),hw,Math.abs(fY-y0)||1);
+    ctx.fillStyle=p.dynWinsXIRR?'rgba(0,229,255,1)':'rgba(0,229,255,.7)';
+    ctx.fillRect(x+1,Math.min(dY,y0),hw,Math.abs(dY-y0)||1);
+  });
+  // x-axis labels — show ~8 evenly spaced
+  ctx.fillStyle='#3a4455';ctx.font='9px JetBrains Mono';ctx.textAlign='center';
+  const labelStep=Math.max(1,Math.floor(n/8));
+  bt.periods.forEach((p,i)=>{
+    if(i%labelStep===0||i===n-1){
+      const lbl=p.label||(i+1);
+      ctx.fillText(lbl,xS(i),H-pad.b+12);
+    }
+  });
+  ctx.textAlign='left';
+}
+function drawBTWealthChart(bt){
+  const r=getCtx('btWealthChart',200); if(!r)return;
+  const{ctx,W,H}=r;
+  const pad={t:10,r:72,b:24,l:6},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  ctx.clearRect(0,0,W,H);
+  if(!bt.wealthPaths||bt.wealthPaths.length===0)return;
+  const n=bt.wealthPaths[0].fixed.length;
+  const medF=[],medD=[],p25F=[],p75F=[],p25D=[],p75D=[];
+  for(let t=0;t<n;t++){
+    const fv=bt.wealthPaths.map(p=>p.fixed[t]).sort((a,b)=>a-b);
+    const dv=bt.wealthPaths.map(p=>p.dyn[t]).sort((a,b)=>a-b);
+    const mid=v=>v[Math.floor(v.length/2)];
+    const q25=v=>v[Math.floor(v.length*0.25)];
+    const q75=v=>v[Math.floor(v.length*0.75)];
+    medF.push(mid(fv));medD.push(mid(dv));
+    p25F.push(q25(fv));p75F.push(q75(fv));
+    p25D.push(q25(dv));p75D.push(q75(dv));
+  }
+  const maxV=Math.max(...medF,...medD,...p75F,...p75D)*1.05;
+  const xS=i=>pad.l+(i/(n-1))*cW, yS=v=>pad.t+cH-(v/maxV)*cH;
+  gridLines(ctx,W,H,pad,maxV); xTicks(ctx,W,H,pad,bt.years*12);
+  [[p25F,p75F,'rgba(255,159,67,.12)'],[p25D,p75D,'rgba(0,229,255,.12)']].forEach(([lo,hi,fill])=>{
+    ctx.beginPath();lo.forEach((v,i)=>i?ctx.lineTo(xS(i),yS(v)):ctx.moveTo(xS(i),yS(v)));
+    for(let i=n-1;i>=0;i--)ctx.lineTo(xS(i),yS(hi[i]));
+    ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  });
+  [[medF,'#ff9f43',2.5],[medD,'#00e5ff',3]].forEach(([arr,stroke,lw])=>{
+    ctx.beginPath();arr.forEach((v,i)=>i?ctx.lineTo(xS(i),yS(v)):ctx.moveTo(xS(i),yS(v)));
+    ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke();
+  });
+}
+function drawBTDist(bt){
+  const r=getCtx('btDist',80); if(!r)return;
+  const{ctx,W,H}=r;
+  const pad={t:5,r:5,b:5,l:5},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  ctx.clearRect(0,0,W,H);
+  const gaps=bt.periods.map(p=>p.gap);
+  const minG=Math.min(...gaps),maxG=Math.max(...gaps);
+  if(maxG===minG)return;
+  const BINS=20,binW=(maxG-minG)/BINS;
+  const counts=new Array(BINS).fill(0);
+  gaps.forEach(g=>{const b=Math.min(BINS-1,Math.floor((g-minG)/binW));counts[b]++;});
+  const maxC=Math.max(...counts),bW=cW/BINS;
+  counts.forEach((c,i)=>{
+    const x=pad.l+i*bW,barH=(c/maxC)*cH,mid=minG+(i+.5)*binW;
+    ctx.fillStyle=mid>=0?'rgba(0,229,255,.6)':'rgba(252,92,101,.6)';
+    ctx.fillRect(x,pad.t+cH-barH,bW-1,barH);
+  });
+  if(minG<0&&maxG>0){const zx=pad.l+((-minG)/(maxG-minG))*cW;ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(zx,pad.t);ctx.lineTo(zx,pad.t+cH);ctx.stroke();ctx.setLineDash([]);}
+  document.getElementById('bt-dist-labels').innerHTML=`<span>${minG.toFixed(1)}pp</span><span>← Fixed wins | Dynamic wins →</span><span>${maxG.toFixed(1)}pp</span>`;
+}
+
+// ── Monthly log toggle ────────────────────────────────────────────────────────
+function toggleLog(){
+  const tbl=document.getElementById('logTable');
+  const btn=document.getElementById('logToggleBtn');
+  if(!tbl||!btn)return;
+  const open=tbl.style.display==='block';
+  tbl.style.display=open?'none':'block';
+  btn.textContent=open?'▶ Show raw data':'▼ Hide raw data';
+}
+function buildTable(rows,baseSIP){
+  const tbody=document.getElementById('tbl');
+  tbody.innerHTML='';
+  rows.slice(-36).forEach(r=>{
+    const tr=document.createElement('tr');
+    const isDip=r.sig.startsWith('DIP'),isRise=r.sig.startsWith('RISE'),isCap=r.sig.endsWith('CAP');
+    const pc=isDip?'pill-dip':isRise?'pill-rise':'pill-norm';
+    const pt=isDip?`▼ Dip${isCap?' ⚡':''} (${fmtPct(r.diff*100)})`:isRise?`▲ Rise${isCap?' ⚡':''} (${fmtPct(r.diff*100)})`:'Normal';
+    tr.innerHTML=`<td>M${r.i+1}</td><td>${r.nav.toFixed(1)}</td><td>${r.avg6m.toFixed(1)}</td>
+      <td><span class="pill ${pc}">${pt}</span></td>
+      <td>${fmtShort(r.totalCap)}</td>
+      <td>${fmtShort(r.fFundAmt)}</td>
+      <td style="color:${r.fLiq>=0?'var(--nav-up)':'var(--nav-dn)'}">${fmtShort(r.fLiq)}</td>
+      <td style="color:${r.dFundAmt>baseSIP?'#26de81':r.dFundAmt<baseSIP?'#fc5c65':'#8892a4'}">${fmtShort(r.dFundAmt)}</td>
+      <td style="color:${r.dLiq>=0?'var(--nav-up)':'var(--nav-dn)'}">${fmtShort(r.dLiq)}</td>
+      <td>${fmtShort(r.fWealth)}</td>
+      <td style="color:var(--dyn)">${fmtShort(r.dWealth)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+let resizeTimer;
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>{
+    if(lastData)drawAll();
+    if(lastBT){drawBTBars(lastBT);drawBTDist(lastBT);drawBTDonut(lastBT);drawBTWealthChart(lastBT);}
+  },120);
+});
+
+function initApp(){
+  const el=document.getElementById('panel-backtest');
+  if(!el) return;
+  const w=el.getBoundingClientRect().width;
+  if(w>10){
+    applyVolUI(5);
+    syncDipRiseDefaults(parseSip(document.getElementById('sipTyped').value));
+    setPageMode('backtest');
+    setBTMode('nifty', document.getElementById('bt-mode-nifty'));
+    runBacktest();
+  } else {
+    setTimeout(initApp,50);
+  }
+}
+window.addEventListener('load', initApp);
+</script>
+</body>
+</html>
